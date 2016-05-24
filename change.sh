@@ -1,1 +1,1 @@
-sed -i -- "s/chimera.*h5/$1/g" test01.xmf
+sed -i -- "s/chimera.*h5/$1/g" dataformat.xmf

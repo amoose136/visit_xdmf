@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<Object name="TransformAttributes">
+    <Field name="doRotate" type="bool">false</Field>
+    <Field name="rotateOrigin" type="doubleArray" length="3">0 0 0 </Field>
+    <Field name="rotateAxis" type="doubleArray" length="3">0 0 1 </Field>
+    <Field name="rotateAmount" type="double">0</Field>
+    <Field name="rotateType" type="string">Deg</Field>
+    <Field name="doScale" type="bool">false</Field>
+    <Field name="scaleOrigin" type="doubleArray" length="3">0 0 0 </Field>
+    <Field name="scaleX" type="double">1</Field>
+    <Field name="scaleY" type="double">1</Field>
+    <Field name="scaleZ" type="double">1</Field>
+    <Field name="doTranslate" type="bool">false</Field>
+    <Field name="translateX" type="double">0</Field>
+    <Field name="translateY" type="double">0</Field>
+    <Field name="translateZ" type="double">0</Field>
+    <Field name="transformType" type="string">Coordinate</Field>
+    <Field name="inputCoordSys" type="string">Spherical</Field>
+    <Field name="outputCoordSys" type="string">Cartesian</Field>
+    <Field name="continuousPhi" type="bool">false</Field>
+    <Field name="m00" type="double">1</Field>
+    <Field name="m01" type="double">0</Field>
+    <Field name="m02" type="double">0</Field>
+    <Field name="m03" type="double">0</Field>
+    <Field name="m10" type="double">0</Field>
+    <Field name="m11" type="double">1</Field>
+    <Field name="m12" type="double">0</Field>
+    <Field name="m13" type="double">0</Field>
+    <Field name="m20" type="double">0</Field>
+    <Field name="m21" type="double">0</Field>
+    <Field name="m22" type="double">1</Field>
+    <Field name="m23" type="double">0</Field>
+    <Field name="m30" type="double">0</Field>
+    <Field name="m31" type="double">0</Field>
+    <Field name="m32" type="double">0</Field>
+    <Field name="m33" type="double">1</Field>
+    <Field name="invertLinearTransform" type="bool">false</Field>
+    <Field name="vectorTransformMethod" type="string">AsDirection</Field>
+    <Field name="transformVectors" type="bool">true</Field>
+</Object>
