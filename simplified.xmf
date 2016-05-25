@@ -1,0 +1,34 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2.0">
+ <Domain>
+  <Grid Name="mesh1" GridType="Uniform">
+    
+    <Topology TopologyType="2DRectMesh" NumberOfElements="2 2"/>
+    
+    <Geometry GeometryType="VXVY">
+      <DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
+        0 10
+      </DataItem>
+      <DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
+        0 10
+      </DataItem>
+    </Geometry>
+    
+    <Attribute Name="TESTvariable" AttributeType="Vector" Center="Node">
+      <DataItem ItemType="Function"
+        Function="JOIN($0 , $1)" Dimensions="2 2">
+        <DataItem Dimensions="2 2" Format="XML">
+          1 1
+          1 0
+        </DataItem>
+        <DataItem Dimensions="2 2" Format="XML">
+          4 -4
+          1 2
+        </DataItem>
+      </DataItem>
+    </Attribute> 
+
+  </Grid>
+ </Domain>
+</Xdmf>
