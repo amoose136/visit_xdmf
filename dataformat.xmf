@@ -1,5 +1,8 @@
 <?xml version="1.0" ?>
-<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" [
+
+
+]>
 <Xdmf Version="2.0">
  <Domain>
    <Grid Name="mesh1" GridType="Uniform">
@@ -46,7 +49,7 @@
   </Attribute>
   <Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
     <DataItem ItemType="Function"
-      Function="JOIN($0 , $1)" Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF">
+      Function="JOIN($0, $1)" Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF">
       <DataItem Reference="chimera_00774_grid_1_01.h5:/fluid/u_c" />
       <DataItem Reference="chimera_00774_grid_1_01.h5:/fluid/v_c" />
     </DataItem>

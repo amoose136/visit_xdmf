@@ -15,18 +15,27 @@
       </DataItem>
     </Geometry>
     
-    <Attribute Name="TESTvariable" AttributeType="Vector" Center="Node">
-      <DataItem ItemType="Function"
-        Function="JOIN($0 , $1)" Dimensions="2 2">
-        <DataItem Dimensions="2 2" Format="XML">
-          1 1
-          1 0
+    <Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
+<DataItem Dimensions="2" Function="JOIN($0, $1)"  
+ItemType="Function">
+     <DataItem Dimensions="1" Format="XML" ItemType="Uniform"
+                  NumberType="Float" Precision="4">
+-1
+     </DataItem>
+     <DataItem Dimensions="1" Format="XML" ItemType="Uniform"
+                     NumberType="Float" Precision="4">
+5
+     </DataItem>
+   </DataItem>
+ <!--      <DataItem ItemType="Function"
+        Function="JOIN($0 , $1)" Dimensions="2">
+        <DataItem Dimensions="1" Format="XML">
+          -1
         </DataItem>
-        <DataItem Dimensions="2 2" Format="XML">
-          4 -4
-          1 2
+        <DataItem Dimensions="1" Format="XML">
+          4
         </DataItem>
-      </DataItem>
+      </DataItem> -->
     </Attribute> 
 
   </Grid>
