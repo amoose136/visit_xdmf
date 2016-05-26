@@ -14,24 +14,17 @@
         0 10
       </DataItem>
     </Geometry>
+    
     <!-- It appears to be critical that the center type is cell -->
     <Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
      <DataItem Dimensions="2" Format="XML" ItemType="Uniform"
-      NumberType="Float" Precision="4">5 1
+      NumberType="Float" Precision="4 4">5 1
     </DataItem>
-    <!-- Have no idea why the next line is important but it is -->
-     <DataItem Dimensions="2" Format="XML" ItemType="Uniform"
+    <!--Have no idea why the next line is important but it is 
+		The dimension must be 2 and it can only have one value???-->
+ 	<DataItem Dimensions="2" Format="XML" ItemType="Uniform"
       NumberType="Float" Precision="4">0
     </DataItem> 
- <!--      <DataItem ItemType="Function"
-        Function="JOIN($0 , $1)" Dimensions="2">
-        <DataItem Dimensions="1" Format="XML">
-          -1
-        </DataItem>
-        <DataItem Dimensions="1" Format="XML">
-          4
-        </DataItem>
-      </DataItem> -->
     </Attribute> 
 
   </Grid>
