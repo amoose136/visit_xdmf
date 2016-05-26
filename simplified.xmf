@@ -3,28 +3,27 @@
 <Xdmf Version="2.0">
  <Domain>
   <Grid Name="mesh1" GridType="Uniform">
-    
+    <!-- Define the mesh where the vectors will sit -->
     <Topology TopologyType="2DRectMesh" NumberOfElements="2 2"/>
-    
     <Geometry GeometryType="VXVY">
       <DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
-        0 10
+	    0 10
       </DataItem>
       <DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
         0 10
       </DataItem>
     </Geometry>
     
-    <!-- It appears to be critical that the center type is cell -->
-    <Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
-     <DataItem Dimensions="2" Format="XML" ItemType="Uniform"
-      NumberType="Float" Precision="4 4">5 1
+	<!--It appears to be critical that the center type is cell -->
+ 	<Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
+    <DataItem Dimensions="2" Format="XML"
+      NumberType="Float" Precision="4">5 1
     </DataItem>
-    <!--Have no idea why the next line is important but it is 
-		The dimension must be 2 and it can only have one value???-->
- 	<DataItem Dimensions="2" Format="XML" ItemType="Uniform"
-      NumberType="Float" Precision="4">0
-    </DataItem> 
+	<!--Have no idea why the next line is important but it is 
+		The dimension must be 2 and it can only have one value. The actual value itself appears not to matter -->
+ 	<DataItem Dimensions="2" Format="XML"
+      NumberType="Float" Precision="4">4
+     </DataItem> 
     </Attribute> 
 
   </Grid>
