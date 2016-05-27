@@ -5,56 +5,54 @@
 ]>
 <Xdmf Version="2.0">
  <Domain>
-   <Grid Name="mesh1" GridType="Uniform">
-    <Topology TopologyType="2DRectMesh" NumberOfElements="181 543"/>
-    <Geometry GeometryType="VXVY">
-      <DataItem Dimensions="543" NumberType="Float" Precision="8" Format="HDF">
-        chimera_00774_grid_1_01.h5:/mesh/x_ef
-      </DataItem>
-      <DataItem Dimensions="181" NumberType="Float" Precision="8" Format="HDF">
-        chimera_00774_grid_1_01.h5:/mesh/y_ef
-      </DataItem>
-    </Geometry>
-    <!-- Test comment -->
-    <Attribute Name="Entropy" AttributeType="Scalar" Center="Cell">
-      <DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
-       chimera_00774_grid_1_01.h5:/fluid/entropy
-     </DataItem>
-   </Attribute> 
-   <Attribute Name="Vx-radial" AttributeType="Scalar" Center="Cell">
-    <DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
-      chimera_00774_grid_1_01.h5:/fluid/u_c
-    </DataItem>
-  </Attribute>
-  <Attribute Name="Vy-theta" AttributeType="Scalar" Center="Cell">
-    <DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
-      chimera_00774_grid_1_01.h5:/fluid/v_c
-    </DataItem>
-  </Attribute>
-  <Attribute Name="psi0_cH" AttributeType="Scalar" Center="Cell">
-    <DataItem ItemType="HyperSlab" Dimensions="1 180 542 1 1" Type="HyperSlab">
-      <DataItem Dimensions="3 4" Format="XML">
-        0 0 0 1 1
-        1 1 1 1 1
-        1 180 542 1 1
-      </DataItem>
-      <DataItem Dimensions="1 180 542 4 20" NumberType="Float" Precision="8" Format="HDF" >
-        chimera_00774_grid_1_01.h5:/radiation/psi0_c
-      </DataItem>
-    </DataItem>
-  </Attribute>
-  <Attribute Name="Elec. Fraction" AttributeType="Scalar" Center="Cell">
-    <DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
-      chimera_00774_grid_1_01.h5:/fluid/ye_c
-    </DataItem>
-  </Attribute>
-  <Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
-    <DataItem ItemType="Function"
-      Function="JOIN($0, $1)" Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF">
-      <DataItem Reference="chimera_00774_grid_1_01.h5:/fluid/u_c" />
-      <DataItem Reference="chimera_00774_grid_1_01.h5:/fluid/v_c" />
-    </DataItem>
- </Attribute> 
+	 <Grid Name="mesh1" GridType="Uniform">
+		<Topology TopologyType="2DRectMesh" NumberOfElements="181 543"/>
+		<Geometry GeometryType="VXVY">
+			<DataItem Dimensions="543" NumberType="Float" Precision="8" Format="HDF">
+				chimera_00774_grid_1_01.h5:/mesh/x_ef
+			</DataItem>
+			<DataItem Dimensions="181" NumberType="Float" Precision="8" Format="HDF">
+				chimera_00774_grid_1_01.h5:/mesh/y_ef
+			</DataItem>
+		</Geometry>
+		<!-- Test comment -->
+		<Attribute Name="Entropy" AttributeType="Scalar" Center="Cell">
+			<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
+				chimera_00774_grid_1_01.h5:/fluid/entropy
+		 </DataItem>
+		</Attribute>
+		<Attribute Name="X_Al25" AttributeType="Scalar" Center="Cell">
+		<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
+			chimera_00774_grid_1_01.h5:/abundance/xn_c[1][][][36]
+		</DataItem>
+	 </Attribute> 
+	 <Attribute Name="Vx-radial" AttributeType="Scalar" Center="Cell">
+		<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
+			chimera_00774_grid_1_01.h5:/fluid/u_c
+		</DataItem>
+	</Attribute>
+	<Attribute Name="Vy-theta" AttributeType="Scalar" Center="Cell">
+		<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF" >
+			chimera_00774_grid_1_01.h5:/fluid/v_c
+		</DataItem>
+	</Attribute>
+	<Attribute Name="psi0_cH" AttributeType="Scalar" Center="Cell">
+		<DataItem ItemType="HyperSlab" Dimensions="1 180 542 1 1" Type="HyperSlab">
+			<DataItem Dimensions="3 4" Format="XML">
+				0 0 0 1 1
+				1 1 1 1 1
+				1 180 542 1 1
+			</DataItem>
+			<DataItem Dimensions="1 180 542 4 20" NumberType="Float" Precision="8" Format="HDF">
+				chimera_00774_grid_1_01.h5:/radiation/psi0_c
+			</DataItem>
+		</DataItem>
+	</Attribute>
+	<Attribute Name="Elec. Fraction" AttributeType="Scalar" Center="Cell">
+		<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF">
+			chimera_00774_grid_1_01.h5:/fluid/ye_c
+		</DataItem>
+	</Attribute>
 </Grid>
 </Domain>
 </Xdmf>
