@@ -41,7 +41,7 @@
 			<DataItem Dimensions="3 4" Format="XML">
 				0 0 0 1 1
 				1 1 1 1 1
-				1 180 542 1 1
+				1 180 542 4 20
 			</DataItem>
 			<DataItem Dimensions="1 180 542 4 20" NumberType="Float" Precision="8" Format="HDF">
 				chimera_00774_grid_1_01.h5:/radiation/psi0_c
@@ -51,6 +51,20 @@
 	<Attribute Name="Elec. Fraction" AttributeType="Scalar" Center="Cell">
 		<DataItem Dimensions="180 542" NumberType="Float" Precision="8" Format="HDF">
 			chimera_00774_grid_1_01.h5:/fluid/ye_c
+		</DataItem>
+	</Attribute>
+	<Attribute AttributeType="Vector" Center="Cell">
+		<DataItem ItemType="HyperSlab" Dimensions="180 542 3" Type="HyperSlab">
+			<DataItem Dimensions="3 4" Format="XML" NumberType="Float">
+			</DataItem>
+			<DataItem ItemType="Collection">
+				<DataItem Dimension="blah">
+				</DataItem>
+				<DataItem>
+				</DataItem>
+				<DataItem>
+				</DataItem>
+			</DataItem>
 		</DataItem>
 	</Attribute>
 </Grid>
