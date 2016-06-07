@@ -4,13 +4,13 @@
 	<Domain>
 		<Grid Name="mesh1" GridType="Uniform">
 			<!-- Define the mesh where the vectors will sit -->
-			<Topology TopologyType="2DRectMesh" NumberOfElements="2 2 4"/>
+			<Topology TopologyType="3DRectMesh" NumberOfElements="2 3 4"/>
 			<Geometry GeometryType="VXVYVZ">
 				<DataItem Dimensions="4" NumberType="Float" Precision="8" Format="XML">
 					0 10 15 20
 				</DataItem>
-				<DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
-					0 10
+				<DataItem Dimensions="3" NumberType="Float" Precision="8" Format="XML">
+					0 10 15
 				</DataItem>
 				<DataItem Dimensions="2" NumberType="Float" Precision="8" Format="XML">
 					0 10
@@ -19,8 +19,9 @@
 
 			<!--It appears to be critical that the center type is cell -->
 			<Attribute Name="TESTvariable" AttributeType="Vector" Center="Cell">
-				<DataItem Dimensions="9" Format="XML" NumberType="Float" Precision="4">
+				<DataItem Dimensions="3 2 3" Format="XML" NumberType="Float" Precision="4">
 					5 -5 9 1 2 3 1 2 6
+					-5 5 -9 -1 -2 -3 -1 -2 -6
 				</DataItem>
 			</Attribute> 
 
