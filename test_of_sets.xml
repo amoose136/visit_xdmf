@@ -1,0 +1,17 @@
+<?xml version="1.0" ?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="3.0">
+<Set Name="Ids" SetType="Face">
+    <DataItem Format="XML" Dimensions="4" >
+        1 2 3 4
+    </DataItem>
+    <DataItem Format="XML" Dimensions="4" >
+        0 0 0 0
+    </DataItem> 
+    <Attribute Name="Example" Center="Face">
+        <DataItem Format="XML" Dimensions="4" >
+            100.0 110.0 100.0 200.0
+        </DataItem>
+    </Attribute>
+</Set>
+</Xdmf>
