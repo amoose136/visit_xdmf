@@ -1,4 +1,5 @@
-<Grid Name="Abundance">
+<?xml version='1.0' encoding='ASCII'?>
+<Grid GridType="Uniform" Name="Abundance">
   <Topology Reference="/XDMF/Domain/Grid[1]/Topology[1]"/>
   <Grid Reference="/XDMF/Domain/Grid[1]/Geometry[1]"/>
   <Attribute AttributeType="Scalar" Center="Cell" Name="d">

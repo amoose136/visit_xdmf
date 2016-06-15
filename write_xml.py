@@ -1,5 +1,6 @@
-#Taken from the lxml tutorial in the lxml manual because it is a robust import statement
 import time
+start_time =time.time()
+#Taken from the lxml tutorial in the lxml manual because it is a robust import statement
 try:
 	from lxml import etree as et
 	print("running with lxml.etree")
@@ -25,10 +26,12 @@ except ImportError:
 					print("running with ElementTree")
 				except ImportError:
 					print("Failed to import ElementTree from any known place")
+# End directly coppied portion
+
 import h5py
 import numpy as np
 
-start_time =time.time()
+
 
 filename='chimera_00774_grid_1_01.h5'
 hf = h5py.File(filename,'r')
@@ -47,5 +50,5 @@ for i,name in enumerate(hf['abundance']['a_name'][:5]):
 	et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="\n0 0 0 "+str(i)+"\n1 1 1 1\n1 "+dimstr+" 1\n"
 	et.SubElement(dataElement,"DataItem",Dimensions="1 "+dimstr+" 161",Precisions="8",Format="HDF").text="\n"+filename+":/abundance/xn_c\n"
 f=open(filename[:-3]+'.xmf','w')
-f.write(et.tostring(grid,pretty_print=True))
+f.write(et.tostring(grid,pretty_print=True,xml_declaration=True))
 print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
