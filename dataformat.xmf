@@ -76,12 +76,10 @@
 
 		</Grid>
 
-		<!-- Abundance Data -->
-		<Grid Name="Abundance" GridType="Collection">
+		<Grid Name="Abundance" GridType="Uniform">
 
 			<Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
 			<Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
-			<Grid Name="Oxygen">
 				<Attribute Name="O16" AttributeType="Scalar" Center="Cell">
 					<DataItem ItemType="HyperSlab" Dimensions="180 542" Type="HyperSlab">
 						<DataItem Dimensions="3 4" Format="XML">
@@ -106,7 +104,7 @@
 						</DataItem>
 					</DataItem>
 				</Attribute>
-			</Grid>
+
 
 
 			<Attribute Name="O18" AttributeType="Scalar" Center="Cell">
