@@ -1,1 +1,0 @@
-sed -i -- "s/chimera.*h5/$1/g" dataformat.xmf
