@@ -7,14 +7,12 @@
       <Geometry GeometryType="VXVY">
         <DataItem Dimensions="543" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/mesh/x_ef</DataItem>
         <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/mesh/y_ef</DataItem>
-        <DataStructure Name="Units" Format="XML">m</DataStructure>
       </Geometry>
       <Time Value="0.0814010427127"/>
     </Grid>
     <Grid Name="Abundance">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
       <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
-
       <Attribute AttributeType="Scalar" Center="Cell" Name="d">
         <DataItem Dimensions="180 542" ItemType="HyperSlab" Type="HyperSlab">
           <DataItem Dimensions="3 4" Format="XML">0 0 0 0 1 1 1 1 1 180 542 1</DataItem>
@@ -34,13 +32,9 @@
         </DataItem>
       </Attribute>
     </Grid>
-
-
     <Grid GridType="Uniform" Name="Abundance/he">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
       <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
-
-
       <Attribute AttributeType="Scalar" Center="Cell" Name="3">
         <DataItem Dimensions="180 542" ItemType="HyperSlab" Type="HyperSlab">
           <DataItem Dimensions="3 4" Format="XML">0 0 0 1 1 1 1 1 1 180 542 1</DataItem>
@@ -53,14 +47,6 @@
           <DataItem Dimensions="1 180 542 161" Format="HDF" Precisions="8">chimera_00774_grid_1_01.h5:/abundance/xn_c</DataItem>
         </DataItem>
       </Attribute>
-
-      <Attribute Dimensions="180 542" AttributeType="Scalar" Center="Cell" Name="sum">
-        <DataItem Dimensions="180 542" ItemType="Function" Function="$0 + $1">
-          <DataItem Dimensions="180 542" Reference="/Xdmf/Domain/Grid[@Name='he']/Attribute[@Name='3']/DataItem[1]"/>
-          <DataItem Dimensions="180 542" Reference="/Xdmf/Domain/Grid[@Name='he']/Attribute[@Name='4']/DataItem[1]"/>
-        </DataItem>
-      </Attribute>
-
     </Grid>
     <Grid GridType="Uniform" Name="Abundance/li">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
