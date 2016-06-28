@@ -55,6 +55,30 @@ et.SubElement(grid['Chimera'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh
 et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 et.SubElement(grid['Abundance'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 
+storage_names = { "Entropy":"entropy",
+	"v_radial":"u_c",
+	"v_theta":"v_c",
+	"v_phi":"w_c",
+	"Entropy":"entropy",
+	# "BruntViasala_freq":"",
+	"Electron_fraction":"ye_c",
+	"Gravity_phi":"grav_x_c",
+	"Gravity_r":"grav_y_c",
+	"Gravity_theta":"grav_z_c",
+	"Lepton_fraction":"ylep",
+	"Mach_number":"v_csound",
+	# "Neutrino_Heating_rate":"",
+	# "Nuclear_Heating_rate":"",
+	# "Pressure":"",
+	# "Temperature":"",
+	# "mean_A":"",
+	# "nse_flag":"",
+
+}
+for name in storage_names:
+	at = et.SubElement(grid['Chimera'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+	et.SubElement(at,"DataItem",Dimensions=dimstr,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+
 for i,name in enumerate(hf['abundance']['a_name']):
 	if re.findall('\D\d',name):
 		element_name=re.sub('\d','',name)
