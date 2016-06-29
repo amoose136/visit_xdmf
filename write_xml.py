@@ -105,6 +105,8 @@ except ImportError:
 	try:
 		import os
 		os.system("module unload PE-intel; module load PE-gnu python python_h5py")
+		print("Trying to run under reloaded modules")
 		os.system("python write_xml.py "+ filename)
+		print("Finished")
 	except:
 		print("Fatal error: could not import h5py")
