@@ -1,6 +1,18 @@
+#This next bit is specific to ORNL. If h5py import fails it switches environments and reloads the file
+try:
+	import h5py
+except ImportError:
+	try:
+		import os
+		os.system("module unload PE-intel; module load PE-gnu python python_h5py")
+		os.system("python write_")
+	except:
+		print("Fatal error: could not import h5py")
+
 import time
 start_time =time.time()
-#Taken from the lxml tutorial in the lxml manual because it is a robust import statement
+
+#Next bit Taken from the lxml tutorial in the lxml manual because it is a robust import statement
 try:
 	from lxml import etree as et
 	print("running with lxml.etree")
@@ -28,11 +40,11 @@ except ImportError:
 					print("Failed to import ElementTree from any known place")
 # End directly coppied portion
 
-import h5py
 import numpy as np
 import re
+import sys
 
-filename='chimera_00774_grid_1_01.h5'
+filename=sys.argv[1]
 hf = h5py.File(filename,'r')
 dims=[]
 #appends the first element of 'array_dimensions' -> 542
@@ -46,37 +58,37 @@ dimstr = str(dims[1])+" "+str(dims[0]) #dimstr="180 542"
 xdmf = et.Element("Xdmf",Version="2.0")
 domain = et.SubElement(xdmf,"Domain")
 
-grid = {'Chimera':et.SubElement(domain,"Grid",Name="Chimera"),'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
-et.SubElement(grid['Chimera'],"Topology",TopologyType="2DRectMesh",NumberOfElements="181 543")
-geometry = et.SubElement(grid['Chimera'],"Geometry",GeometryType="VXVY")
+grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
+		'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
+et.SubElement(grid['Hydro'],"Topology",TopologyType="2DRectMesh",NumberOfElements="181 543")
+geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVY")
 et.SubElement(geometry,"DataItem",Dimensions="543",NumberType="Float",Precision="8",Format="HDF").text = filename + ":/mesh/x_ef"
 et.SubElement(geometry,"DataItem",Dimensions="181",NumberType="Float",Precision="8",Format="HDF").text = filename + ":/mesh/y_ef"
-et.SubElement(grid['Chimera'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 et.SubElement(grid['Abundance'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 
-storage_names = { "Entropy":"entropy",
+storage_names = { 
+	"Entropy":"entropy",
 	"v_radial":"u_c",
 	"v_theta":"v_c",
 	"v_phi":"w_c",
-	"Entropy":"entropy",
-	# "BruntViasala_freq":"",
+	"BruntViasala_freq":"wBVMD",
 	"Electron_fraction":"ye_c",
 	"Gravity_phi":"grav_x_c",
 	"Gravity_r":"grav_y_c",
 	"Gravity_theta":"grav_z_c",
 	"Lepton_fraction":"ylep",
 	"Mach_number":"v_csound",
-	# "Neutrino_Heating_rate":"",
-	# "Nuclear_Heating_rate":"",
-	# "Pressure":"",
-	# "Temperature":"",
-	# "mean_A":"",
-	# "nse_flag":"",
-
+	"Neutrino_Heating_rate":"dudt_nu",
+	"Nuclear_Heating_rate":"dudt_nuc",
+	"Pressure":"press",
+	"Temperature":"t_c",
+	# "mean_A":"",#computed quantity to be added later
+	"nse_flag":"e_int",
 }
 for name in storage_names:
-	at = et.SubElement(grid['Chimera'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+	at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 	et.SubElement(at,"DataItem",Dimensions=dimstr,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
 
 for i,name in enumerate(hf['abundance']['a_name']):
