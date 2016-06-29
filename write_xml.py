@@ -1,3 +1,6 @@
+import sys
+filename=sys.argv[1]
+
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads the file
 try:
 	import h5py
@@ -5,7 +8,7 @@ except ImportError:
 	try:
 		import os
 		os.system("module unload PE-intel; module load PE-gnu python python_h5py")
-		os.system("python write_")
+		os.system("python write_xml.py "+ filename)
 	except:
 		print("Fatal error: could not import h5py")
 
@@ -42,9 +45,7 @@ except ImportError:
 
 import numpy as np
 import re
-import sys
 
-filename=sys.argv[1]
 hf = h5py.File(filename,'r')
 dims=[]
 #appends the first element of 'array_dimensions' -> 542
