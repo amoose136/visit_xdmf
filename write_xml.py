@@ -1,7 +1,13 @@
 import time
 start_time =time.time()
 import sys
-filename=sys.argv[1]
+try:
+	filename=sys.argv[1]
+except:
+	print("Error: No filename argument provided.")
+	print("Try instead:")
+	print("	python write_xml.py foo.h5")
+	sys.exit()
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads the file
 try:
 	import h5py
@@ -103,10 +109,11 @@ try:
 	print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
 except ImportError:
 	try:
-		import os
-		os.system("module unload PE-intel; module load PE-gnu python python_h5py")
+		import subprocess as sp
+		sp.call(["module", "unload", "PE-intel", "python"])
+		sp.call(["module", "load", "PE-gnu", "python", "python_h5py"])
 		print("Trying to run under reloaded modules")
-		os.system("python write_xml.py "+ filename)
+		# pytos.system("python write_xml.py "+ filename)
 		print("Finished")
 	except:
 		print("Fatal error: could not import h5py")
