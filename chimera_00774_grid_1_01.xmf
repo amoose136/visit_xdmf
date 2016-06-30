@@ -2,13 +2,31 @@
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
 <Xdmf Version="2.0">
   <Domain>
-    <Grid Name="Chimera">
+    <Grid Name="Hydro">
       <Topology NumberOfElements="181 543" TopologyType="2DRectMesh"/>
       <Geometry GeometryType="VXVY">
         <DataItem Dimensions="543" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/mesh/x_ef</DataItem>
         <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/mesh/y_ef</DataItem>
       </Geometry>
       <Time Value="0.0814010427127"/>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Temperature">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/t_c</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Mach_number">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/v_csound</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Pressure">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/press</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="BruntViasala_freq">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/wBVMD</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="nse_flag">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/e_int</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Electron_fraction">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/ye_c</DataItem>
+      </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Name="Gravity_phi">
         <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/grav_x_c</DataItem>
       </Attribute>
@@ -18,8 +36,11 @@
       <Attribute AttributeType="Scalar" Center="Cell" Name="Entropy">
         <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/entropy</DataItem>
       </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Name="Mach_number">
-        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/v_csound</DataItem>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Nuclear_Heating_rate">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/dudt_nuc</DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Name="Neutrino_Heating_rate">
+        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/dudt_nu</DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Name="Gravity_r">
         <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/grav_y_c</DataItem>
@@ -35,9 +56,6 @@
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Name="v_radial">
         <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/u_c</DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Name="Electron_fraction">
-        <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">chimera_00774_grid_1_01.h5:/fluid/ye_c</DataItem>
       </Attribute>
     </Grid>
     <Grid Name="Abundance">
