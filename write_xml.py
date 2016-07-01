@@ -10,21 +10,23 @@ except:
 	sys.exit()
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads the file
 try:
+	#Most likly to fail part
 	import h5py
-	#Next bit Taken from the lxml tutorial in the lxml manual because it is a robust import statement
+	#Robustly import an xml writer/parser
 	try:
 		from lxml import etree as et
-		print("running with lxml.etree")
+		print("Running with lxml.etree")
 	except ImportError:
 		try:
 			# Python 2.5
 			import xml.etree.cElementTree as et
-			print("running with cElementTree on Python 2.5+")
+			import xml.dom.minidom as md
+			print("Running with cElementTree on Python 2.5+")
 		except ImportError:
 			try:
-				# Python 2.5
+			# Python 2.5
 				import xml.etree.ElementTree as et
-				print("running with ElementTree on Python 2.5+")
+				print("Running with ElementTree on Python 2.5+")
 			except ImportError:
 				try:
 					# normal cElementTree install
@@ -37,7 +39,6 @@ try:
 						print("running with ElementTree")
 					except ImportError:
 						print("Failed to import ElementTree from any known place")
-	# End directly coppied portion
 
 	import numpy as np
 	import re
@@ -104,16 +105,36 @@ try:
 		dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=dimstr, Type="HyperSlab")
 		et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(i)+" 1 1 1 1 1 "+dimstr+" 1"
 		et.SubElement(dataElement,"DataItem",Dimensions="1 "+dimstr+" 161",Precisions="8",Format="HDF").text=filename+":/abundance/xn_c"
+	
+	# Write document tree to file
 	f=open(filename[:-3]+'.xmf','w')
-	f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
+	# if lxml
+	try:
+		f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
+	#others
+	except:
+		print("Writing "+filename+".xmf with improvised \"pretty print\"")
+		def prettify(elem):
+			rough_string = et.tostring(elem, 'utf-8')
+			reparsed = md.parseString(rough_string)
+			t = reparsed.toprettyxml(indent="\t")
+			return t
+		f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n")
+		f.close()
+		f=open(filename[:-3]+'.xmf','a')
+		f.write(prettify(xdmf))
+	f.close()
 	print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
 except ImportError:
 	try:
 		import subprocess as sp
-		sp.call(["module", "unload", "PE-intel", "python"])
-		sp.call(["module", "load", "PE-gnu", "python", "python_h5py"])
 		print("Trying to run under reloaded modules")
-		# pytos.system("python write_xml.py "+ filename)
+		try:
+			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python write_xml.py "+filename],shell=True)
+		except:
+			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+			print("Could not import modules")
 		print("Finished")
 	except:
 		print("Fatal error: could not import h5py")
