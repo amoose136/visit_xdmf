@@ -12,7 +12,6 @@ except:
 try:
 	#Most likly to fail part. On failure, go to exception.
 	import h5py
-
 	#Robustly import an xml writer/parser
 	try:
 		from lxml import etree as et
@@ -95,9 +94,9 @@ try:
 	}
 	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 	function_str="JOIN("
-	for n in range(1, n_hyperslabs+1):
+	for n in range(0, n_hyperslabs):
 			function_str+="$"+str(n)
-			if n!=n_hyperslabs:
+			if n!=n_hyperslabs-1:
 				function_str+=" ; "
 			else:
 				function_str+=")"
@@ -105,7 +104,7 @@ try:
 		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=dimstr)
 		fun = et.SubElement(at,"DataItem",ItemType="Function", Function=function_str,Dimensions=dimstr)
 		for n in range(1, n_hyperslabs+1):
-			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-4] + str(n) + ".h5:/fluid/" + storage_names[name]
+			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
 
 	for i,name in enumerate(hf['abundance']['a_name']):
 		if re.findall('\D\d',name):
@@ -122,7 +121,7 @@ try:
 		for n in range(1, n_hyperslabs+1):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=dimstr_sub, Type="HyperSlab")
 			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(i)+" 1 1 1 1 "+dimstr_sub+" 1"
-			et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-4] + str(n)+".h5:/abundance/xn_c"
+			et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-5] + str(format(n, '02d'))+".h5:/abundance/xn_c"
 	
 	# Write document tree to file
 	f=open(filename[:-3]+'.xmf','w')
