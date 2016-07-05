@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='ASCII'?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
+<Xdmf Version="2">
+	<Domain>
+		<Grid Name="Hydro">
+			<Topology NumberOfElements="17 9 723" TopologyType="3DRectMesh"/>
+			<Geometry GeometryType="VXVYVZ">
+				<DataItem Dimensions="723" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/x_ef</DataItem>
+				<DataItem Dimensions="9" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/y_ef</DataItem>
+				<DataItem Dimensions="17" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/z_ef</DataItem>
+			</Geometry>
+			<Time Value="0.0620003769469"/>
+			<Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 722" Name="Entropy">
+				<DataItem 	ItemType="Function" 
+										Function="JOIN($0 ; $1 ; $2 ; $3)" 
+										Dimensions="16 8 722">
+				<DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/fluid/entropy</DataItem>
+				<DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_02.h5:/fluid/entropy</DataItem>
+				<DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_03.h5:/fluid/entropy</DataItem>
+				<DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_04.h5:/fluid/entropy</DataItem>
+				</DataItem>
+			</Attribute>
+		</Grid>
+	</Domain>
+</Xdmf>
