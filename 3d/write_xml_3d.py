@@ -1,6 +1,23 @@
 import time
-start_time =time.time()
+start_time = time.time()
 import sys
+import os
+import subprocess as sp
+visit_path=sp.check_output('which visit',shell=True).rstrip()[:-9]
+sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
+sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
+os.environ['DYLD_LIBRARY_PATH']
+try:
+	import visit
+	import visit_utils
+except ImportError:
+	print("Error: visit module import faile\n")
+	print('Please make sure visit\'s path is in $PATH')
+	print('	( /path/to/visit/bin )')
+	print('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
+	print ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
+	sys.exit()
+visit.Launch()
 try:
 	filename=sys.argv[1]
 except:
@@ -144,7 +161,6 @@ try:
 	print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
 except ImportError:
 	try:
-		import subprocess as sp
 		print("Trying to run under reloaded modules")
 		try:
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
