@@ -3,36 +3,63 @@
 <Xdmf Version="2.0">
   <Domain>
     <Grid Name="Hydro">
-      <Topology NumberOfElements="61 181 301" TopologyType="3DRectMesh"/>
+      <Topology NumberOfElements="181 181 541" TopologyType="3DRectMesh"/>
       <Geometry GeometryType="VXVYVZ">
-        <DataItem Dimensions="301" ItemType="HyperSlab" Type="HyperSlab">
-          <DataItem Dimensions="3 1" Format="XML">0 1 301</DataItem>
+        <DataItem Dimensions="541" ItemType="HyperSlab" Type="HyperSlab">
+          <DataItem Dimensions="3 1" Format="XML">0 1 541</DataItem>
           <DataItem Dimensions="543" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/mesh/x_ef</DataItem>
         </DataItem>
         <DataItem Dimensions="181" ItemType="HyperSlab" Type="HyperSlab">
           <DataItem Dimensions="3 1" Format="XML">0 1 181</DataItem>
           <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/mesh/y_ef</DataItem>
         </DataItem>
-        <DataItem Dimensions="61" ItemType="HyperSlab" Type="HyperSlab">
-          <DataItem Dimensions="3 1" Format="XML">0 1 61</DataItem>
+        <DataItem Dimensions="181" ItemType="HyperSlab" Type="HyperSlab">
+          <DataItem Dimensions="3 1" Format="XML">0 1 181</DataItem>
           <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/mesh/z_ef</DataItem>
         </DataItem>
       </Geometry>
       <Time Value="0.437970399631"/>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="60 180 300" Name="Entropy">
-        <DataItem Dimensions="60 180 300" ItemType="HyperSlab" Type="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 60 180 300</DataItem>
-          <DataItem Dimensions="60 180 542" Function="JOIN($0; $1; $2; $3; $4; $5; $6; $7; $8; $9)" ItemType="Function">
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
-            <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="Entropy">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab" Type="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
+            <DataItem Dimensions="60 180 542" Function="JOIN($0; $1; $2; $3; $4; $5; $6; $7; $8; $9)" ItemType="Function">
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+            </DataItem>
+            <DataItem Dimensions="60 180 542" Function="JOIN($0; $1; $2; $3; $4; $5; $6; $7; $8; $9)" ItemType="Function">
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+            </DataItem>
+            <DataItem Dimensions="60 180 542" Function="JOIN($0; $1; $2; $3; $4; $5; $6; $7; $8; $9)" ItemType="Function">
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+              <DataItem Dimensions="6 180 542" Format="HDF" NumberType="Float" Precision="8">chimera_003800000_grid_1_01.h5:/fluid/entropy</DataItem>
+            </DataItem>
+            <DataItem Dimensions="0 180 542" Function="JOIN($0; $1; $2; $3; $4; $5; $6; $7; $8; $9)" ItemType="Function"/>
           </DataItem>
         </DataItem>
       </Attribute>
