@@ -1,7 +1,6 @@
 import time
 start_time = time.time()
-import sys
-import os
+import sys, os, math
 import subprocess as sp
 from pdb import set_trace as br
 # visit_path=sp.check_output('which visit',shell=True).rstrip()[:-9]
@@ -70,14 +69,20 @@ try:
 	extents.append(hf['mesh']['radial_index_bound'][1])
 	extents.append(hf['mesh']['theta_index_bound'][1])
 	extents.append(hf['mesh']['phi_index_bound'][1])
-	extents_sub = str(extents[2]/hf['mesh']['nz_hyperslabs'].value)+" "+str(extents[1])+" "+str(extents[0])
+	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
+	
+	
+	slices=n_hyperslabs
+	# br()
+	extents[2]=extents[2]/n_hyperslabs*slices
+	dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
+	extents_sub = str(extents[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
 	dimstr = ' '.join([str(x) for x in dims[::-1]])
 	extents_str = ' '.join([str(x) for x in extents[::-1]])
-	dimstr_sub = str(dims[2]/hf['mesh']['nz_hyperslabs'].value)+" "+str(dims[1])+" "+str(dims[0])
 	# create xdmf element
 	xdmf = et.Element("Xdmf", Version="2.0")
 	# br()
-	# create Domain element	xdmf = et.Element("Xdmf",Version="2.0")
+	# create Domain element
 	domain = et.SubElement(xdmf,"Domain")
 
 	grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
@@ -86,7 +91,6 @@ try:
 	geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVYVZ")
 	coords=["x_ef","y_ef","z_ef"]
 	for n,coord_name in enumerate(coords):
-		#hyperslab=hs
 		hyperslab = et.SubElement(geometry, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab",Type="HyperSlab")
 		et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
 		et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = filename + ":/mesh/" + coord_name
@@ -97,39 +101,51 @@ try:
 
 	storage_names = { 
 		"Entropy":"entropy",
-		# "v_radial":"u_c",
-		# "v_theta":"v_c",
-		# "v_phi":"w_c",
-		# "BruntViasala_freq":"wBVMD",
-		# "Electron_fraction":"ye_c",
-		# "Gravity_phi":"grav_x_c",
-		# "Gravity_r":"grav_y_c",
-		# "Gravity_theta":"grav_z_c",
-		# "Lepton_fraction":"ylep",
-		# "Mach_number":"v_csound",
-		# "Neutrino_Heating_rate":"dudt_nu",
-		# "Nuclear_Heating_rate":"dudt_nuc",
-		# "Pressure":"press",
-		# "Temperature":"t_c",
-		# "mean_A":"",#computed quantity to be added later
-		# "nse_flag":"e_int",
+		"v_radial":"u_c",
+		"v_theta":"v_c",
+		"v_phi":"w_c",
+		"BruntViasala_freq":"wBVMD",
+		"Electron_fraction":"ye_c",
+		"Gravity_phi":"grav_x_c",
+		"Gravity_r":"grav_y_c",
+		"Gravity_theta":"grav_z_c",
+		"Lepton_fraction":"ylep",
+		"Mach_number":"v_csound",
+		"Neutrino_Heating_rate":"dudt_nu",
+		"Nuclear_Heating_rate":"dudt_nuc",
+		"Pressure":"press",
+		"Temperature":"t_c",
+		"mean_A":"",#computed quantity to be added later
+		"nse_flag":"e_int",
 	}
-	# br()
-	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
-	function_str="JOIN("
-	for n in range(0, n_hyperslabs):
-			function_str+="$"+str(n)
-			if n!=n_hyperslabs-1:
-				function_str+=" ; "
-			else:
-				function_str+=")"
+	m=dims[:]
+
+	m[2]=extents[2]
+	block_string=' '.join([str(x) for x in m[::-1]])
+	def function_str(m):
+		if m==0:
+			m=10
+		function_stri="JOIN("
+		function_str_array=[]
+		for n in range(0, int(m)):
+			function_str_array.append("$"+str(n))
+		function_stri+='; '.join(function_str_array)+")"
+		return function_stri
+	def dim_str(m):
+		m=min([(slices-(m)*10),10])
+		return str(dims[2]/n_hyperslabs*m)+" "+str(dims[1])+" "+str(dims[0])
 	for name in storage_names:
 		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
 		et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-		fun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str,Dimensions=dimstr)
-		for n in range(1, n_hyperslabs+1):
-			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+		superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str((slices+10)/10),Dimensions=block_string)
+		n=1
+		for m in range(0, int((slices+10)/10)):
+			fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
+			for i in range(0,min([(slices-(m)*10),10])):
+				et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+				# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+				n+=1	
 
 	"""for i,name in enumerate(hf['abundance']['a_name']):
 		if re.findall('\D\d',name):
@@ -149,14 +165,14 @@ try:
 			et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-5] + str(format(n, '02d'))+".h5:/abundance/xn_c"
 	"""
 	# Write document tree to file
-	f=open(filename[:-3]+'.xmf','w')
+	f=open(filename[:-6]+'.xmf','w')
 	# if lxml
 	try:
 		f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
 	#others
 	except:
 		f.close();
-		f=open(filename[:-3]+'.xmf','w')
+		f=open(filename[:-6]+'.xmf','w')
 		print("Writing "+filename+".xmf with improvised \"pretty print\"")
 		def prettify(elem):
 			rough_string = et.tostring(elem, 'utf-8')
@@ -166,7 +182,7 @@ try:
 			return t
 		f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n")
 		f.close()
-		f=open(filename[:-3]+'.xmf','a')
+		f=open(filename[:-6]+'.xmf','a')
 		f.write(prettify(xdmf))
 
 	f.close()
