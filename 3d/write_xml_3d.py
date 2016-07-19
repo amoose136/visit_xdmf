@@ -9,7 +9,7 @@ if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/ccs/home/moose/lib/python2.7/site-packages')
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
 # For my laptop
-elif socket.gethostname()=='Lycoris'
+elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
 try:
 	import visit
@@ -152,20 +152,23 @@ def function_str(m):
 def dim_str(m):
 	m=min([(slices-(m)*10),10])
 	return str(dims[2]/n_hyperslabs*m)+" "+str(dims[1])+" "+str(dims[0])
+def extents_stri(m):
+	m=min([(slices-(m)*10),10])
+	return str(extents[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 for name in storage_names:
 	at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 	hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
 	et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str((slices+10)/10),Dimensions=block_string)
+	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str((slices+10)/10-1),Dimensions=block_string)
 	n=1
-	for m in range(0, int((slices+10)/10)):
+	for m in range(0, int((slices+10)/10-1)):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
 		for i in range(0,min([(slices-(m)*10),10])):
-			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
-			# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+			# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
 			n+=1	
 
-"""for i,name in enumerate(hf['abundance']['a_name']):
+for el,name in enumerate(hf['abundance']['a_name']):
 	if re.findall('\D\d',name):
 		element_name=re.sub('\d','',name)
 		name=re.sub('\D','',name) #find the transition between elements name and number
@@ -176,12 +179,23 @@ for name in storage_names:
 		attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 	else:
 		attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-	fun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str,Dimensions=dimstr)
-	for n in range(1, n_hyperslabs+1):
-		dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=dimstr_sub, Type="HyperSlab")
-		et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(i)+" 1 1 1 1 "+dimstr_sub+" 1"
-		et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-5] + str(format(n, '02d'))+".h5:/abundance/xn_c"
-"""
+	# fun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str,Dimensions=dimstr)
+	# for n in range(1, n_hyperslabs+1):
+	# 	dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=dimstr_sub, Type="HyperSlab")
+	# 	et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(i)+" 1 1 1 1 "+dimstr_sub+" 1"
+	# 	et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-5] + str(format(n, '02d'))+".h5:/abundance/xn_c"
+
+	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str((slices+10)/10-1),Dimensions=extents_str)
+	n=1
+	for m in range(0, int((slices+10)/10-1)):
+		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(m))
+		for i in range(0,min([(slices-(m)*10),10])):
+			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
+			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
+			# et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
+			et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename + ":/abundance/xn_c"
+			n+=1
+
 # Write document tree to file
 f=open(filename[:-6]+'.xmf','w')
 # if lxml
@@ -189,7 +203,7 @@ try:
 	f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
 #others
 except:
-	f.close();
+	f.close()
 	f=open(filename[:-6]+'.xmf','w')
 	print("Writing "+filename+".xmf with improvised \"pretty print\"")
 	def prettify(elem):
