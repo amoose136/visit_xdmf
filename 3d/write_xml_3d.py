@@ -1,9 +1,17 @@
 #!python
+from __future__ import print_function
+# For diagnostics
 import time
 start_time = time.time()
-import sys, os, math, socket
+# Import all the things robustly
+##############################################################################################
+import sys, os, math, socket, argparse
 import subprocess as sp
 from pdb import set_trace as br
+
+#define an error printing function for more accurate error reporting to terminal
+def eprint(*args, **kwargs):
+    print(*args, file=sys.stderr, **kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/ccs/home/moose/lib/python2.7/site-packages')
@@ -15,68 +23,82 @@ try:
 	import visit
 	import visit_utils
 except ImportError:
-	print("Error: visit module import failed\n")
-	print('Please make sure visit\'s path is in $PATH')
-	print('	( /path/to/visit/bin )')
-	print('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
-	print ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
+	eprint("Error: visit module import failed\n")
+	eprint('Please make sure visit\'s path is in $PATH')
+	eprint('	( /path/to/visit/bin )')
+	eprint('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
+	eprint ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
 	sys.exit()
-try:
-	filename=sys.argv[1]
-except:
-	print("Error: No filename argument provided.")
-	print("Try instead:")
-	print("	python write_xml.py foo.h5")
-	sys.exit()
+# Contstruct Parser
+##############################################################################################
+parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h5 files")
+# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
+parser.add_argument('files',metavar='foo.h5',type=str,help='h5 files to process (1 or more args)')
+parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
+parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs=1, help='number of slices to use')
+parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
+parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='use the first wedge for all slices')
+args=parser.parse_args()
+filename=args.files
+##############################################################################################
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
 try:
 	#Most likly to fail part.
 	import h5py
 except ImportError:
 	try:
-		print("Trying to run under reloaded modules")
+		if not args.quiet:
+			print("Trying to run under reloaded modules")
 		try:
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python write_xml_3d.py "+filename],shell=True)
 		except:
 			#redo the offending call so the error can display
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-			print("Could not import modules")
-		print("Finished")
+			eprint("Could not import modules")
+		if not args.quiet:
+			print("Finished")
 	except:
-		print("Fatal error: could not import h5py")
+		eprint("Fatal error: could not import h5py")
 	sys.exit()
 #Robustly import an xml writer/parser
 try:
 	from lxml import etree as et
-	print("Running with lxml.etree")
+	if not args.quiet:
+		print("Running with lxml.etree")
 except ImportError:
 	try:
 		# Python 2.5
 		import xml.etree.cElementTree as et
 		import xml.dom.minidom as md
-		print("Running with cElementTree on Python 2.5+")
+		if not args.quiet:
+			print("Running with cElementTree on Python 2.5+")
 	except ImportError:
 		try:
 		# Python 2.5
 			import xml.etree.ElementTree as et
-			print("Running with ElementTree on Python 2.5+")
+			if not args.quiet:
+				print("Running with ElementTree on Python 2.5+")
 		except ImportError:
 			try:
 				# normal cElementTree install
 				import cElementTree as et
-				print("running with cElementTree")
+				if not args.quiet:
+					print("running with cElementTree")
 			except ImportError:
 				try:
 					# normal ElementTree install
 					import elementtree.ElementTree as et
-					print("running with ElementTree")
+					if not args.quiet:
+						print("running with ElementTree")
 				except ImportError:
-					print("Failed to import ElementTree from any known place")
+					eprint("Failed to import ElementTree from any known place")
 
 import numpy as np
 import re
 
+
+#End Parser construction
 # On with bulk of code
 
 hf = h5py.File(filename,'r')
@@ -89,9 +111,7 @@ extents.append(hf['mesh']['theta_index_bound'][1])
 extents.append(hf['mesh']['phi_index_bound'][1])
 n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 
-
 slices=n_hyperslabs
-# br()
 extents[2]=extents[2]/n_hyperslabs*slices
 dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
 extents_sub = str(extents[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
@@ -102,6 +122,12 @@ xdmf = et.Element("Xdmf", Version="2.0")
 # br()
 # create Domain element
 domain = et.SubElement(xdmf,"Domain")
+if args.slices:
+	if not args.slices[0]>slices:
+		slices=args.slices[0]
+	else:
+		eprint("Error: slices must not be more than the number of wedges")
+		sys.exit()
 
 grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
 		'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
@@ -164,7 +190,9 @@ for name in storage_names:
 	for m in range(0, int((slices+10)/10-1)):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
 		for i in range(0,min([(slices-(m)*10),10])):
-			# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+			# if args.repeat:
+				# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+			# else:
 			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
 			n+=1	
 
@@ -179,12 +207,6 @@ for el,name in enumerate(hf['abundance']['a_name']):
 		attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 	else:
 		attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-	# fun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str,Dimensions=dimstr)
-	# for n in range(1, n_hyperslabs+1):
-	# 	dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=dimstr_sub, Type="HyperSlab")
-	# 	et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(i)+" 1 1 1 1 "+dimstr_sub+" 1"
-	# 	et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",Precisions="8",Format="HDF").text=filename[:-5] + str(format(n, '02d'))+".h5:/abundance/xn_c"
-
 	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str((slices+10)/10-1),Dimensions=extents_str)
 	n=1
 	for m in range(0, int((slices+10)/10-1)):
@@ -192,8 +214,10 @@ for el,name in enumerate(hf['abundance']['a_name']):
 		for i in range(0,min([(slices-(m)*10),10])):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
 			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
-			# et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
-			et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename + ":/abundance/xn_c"
+			if args.repeat==True:
+				et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename + ":/abundance/xn_c"
+			else:
+				et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
 			n+=1
 
 # Write document tree to file
@@ -205,7 +229,8 @@ try:
 except:
 	f.close()
 	f=open(filename[:-6]+'.xmf','w')
-	print("Writing "+filename+".xmf with improvised \"pretty print\"")
+	if not args.quiet:
+		print("Writing "+filename+".xmf with improvised \"pretty print\"")
 	def prettify(elem):
 		rough_string = et.tostring(elem, 'utf-8')
 		reparsed = md.parseString(rough_string)
@@ -217,4 +242,5 @@ except:
 	f=open(filename[:-6]+'.xmf','a')
 	f.write(prettify(xdmf))
 f.close()
-print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
+if not args.quiet:
+	print("--- XMF file created in %s seconds ---" % (time.time()-start_time))
