@@ -36,6 +36,7 @@ parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h
 parser.add_argument('files',metavar='foo.h5',type=str,help='h5 files to process (1 or more args)')
 parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
 parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs=1, help='number of slices to use')
+parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs=1, help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='use the first wedge for all slices')
 args=parser.parse_args()
@@ -183,11 +184,11 @@ for name in storage_names:
 	at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 	hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
 	et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(slices/10+1),Dimensions=block_string)
+	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
 	n=1
-	for m in range(0, int((slices+10)/10)):
+	for m in range(0, int((slices-1)/10)+1):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
-		for i in range(0,(slices-m*10)):
+		for i in range(0,min(slices-m*10,10)):
 			if args.repeat:
 				et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
 			else:
@@ -206,9 +207,9 @@ for el,name in enumerate(hf['abundance']['a_name']):
 		attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 	else:
 		attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(slices/10+1),Dimensions=extents_str)
+	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
 	n=1
-	for m in range(0, int((slices+10)/10)):
+	for m in range(0, int((slices-1)/10)+1):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_str)
 		for i in range(0,(slices-m*10)):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
