@@ -14,7 +14,7 @@ def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
-	sys.path.append('/ccs/home/moose/lib/python2.7/site-packages')
+	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
 # For my laptop
 elif socket.gethostname()=='Lycoris':
