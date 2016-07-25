@@ -1,6 +1,6 @@
 #!python
 from __future__ import print_function
-# For diagnostics
+# For diagnostics, time the execution of the code
 import time
 start_time = time.time()
 # Import all the things robustly
@@ -112,6 +112,12 @@ extents.append(hf['mesh']['phi_index_bound'][1])
 n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 
 slices=n_hyperslabs
+if args.slices:
+	if not args.slices[0]>slices:
+		slices=args.slices[0]
+	else:
+		eprint("Error: slices must not be more than the number of wedges")
+		sys.exit()
 extents[2]=extents[2]/n_hyperslabs*slices
 dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
 extents_sub = str(extents[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
@@ -119,15 +125,9 @@ dimstr = ' '.join([str(x) for x in dims[::-1]])
 extents_str = ' '.join([str(x) for x in extents[::-1]])
 # create xdmf element
 xdmf = et.Element("Xdmf", Version="2.0")
-# br()
 # create Domain element
 domain = et.SubElement(xdmf,"Domain")
-if args.slices:
-	if not args.slices[0]>slices:
-		slices=args.slices[0]
-	else:
-		eprint("Error: slices must not be more than the number of wedges")
-		sys.exit()
+
 
 grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
 		'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
@@ -167,8 +167,6 @@ m=dims[:]
 m[2]=extents[2]
 block_string=' '.join([str(x) for x in m[::-1]])
 def function_str(m):
-	if m==0:
-		m=10
 	function_stri="JOIN("
 	function_str_array=[]
 	for n in range(0, int(m)):
@@ -185,15 +183,15 @@ for name in storage_names:
 	at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 	hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
 	et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str((slices+10)/10-1),Dimensions=block_string)
+	superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(slices/10+1),Dimensions=block_string)
 	n=1
-	for m in range(0, int((slices+10)/10-1)):
+	for m in range(0, int((slices+10)/10)):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
-		for i in range(0,min([(slices-(m)*10),10])):
-			# if args.repeat:
-				# et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
-			# else:
-			et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+		for i in range(0,(slices-m*10)):
+			if args.repeat:
+				et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+			else:
+				et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
 			n+=1	
 
 for el,name in enumerate(hf['abundance']['a_name']):
@@ -207,11 +205,11 @@ for el,name in enumerate(hf['abundance']['a_name']):
 		attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 	else:
 		attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str((slices+10)/10-1),Dimensions=extents_str)
+	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(slices/10+1),Dimensions=extents_str)
 	n=1
-	for m in range(0, int((slices+10)/10-1)):
+	for m in range(0, int((slices+10)/10)):
 		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(m))
-		for i in range(0,min([(slices-(m)*10),10])):
+		for i in range(0,(slices-m*10)):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
 			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 			if args.repeat==True:
