@@ -39,6 +39,7 @@ parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',t
 parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs=1, help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='use the first wedge for all slices')
+parser.add_argument('--run',dest='run',action='store_const',const=True, help='debug variable to make script not run again')
 args=parser.parse_args()
 filename=args.files
 ##############################################################################################
@@ -50,13 +51,15 @@ except ImportError:
 	try:
 		if not args.quiet:
 			print("Trying to run under reloaded modules")
+		
 		try:
-			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python write_xml_3d.py "+filename],shell=True)
+			if not args.run:
+				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
 		except:
 			#redo the offending call so the error can display
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
 			eprint("Could not import modules")
+		sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python write_xml_3d.py "+filename+" --run"],shell=True)
 		if not args.quiet:
 			print("Finished")
 	except:
