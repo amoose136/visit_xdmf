@@ -178,8 +178,7 @@ def dim_str(m):
 	m=min([(slices-(m)*10),10])
 	return str(dims[2]/n_hyperslabs*m)+" "+str(dims[1])+" "+str(dims[0])
 def extents_stri(m):
-	m=min([(slices-(m)*10),10])
-	return str(extents[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
+	return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 for name in storage_names:
 	at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 	hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
@@ -210,7 +209,7 @@ for el,name in enumerate(hf['abundance']['a_name']):
 	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
 	n=1
 	for m in range(0, int((slices-1)/10)+1):
-		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_str)
+		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
 		for i in range(0,(slices-m*10)):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
 			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
