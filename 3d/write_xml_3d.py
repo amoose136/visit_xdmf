@@ -120,7 +120,7 @@ if args.slices:
 		sys.exit()
 extents[2]=extents[2]/n_hyperslabs*slices
 dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
-extents_sub = str(extents[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
+extents_sub = str(dims[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
 dimstr = ' '.join([str(x) for x in dims[::-1]])
 extents_str = ' '.join([str(x) for x in extents[::-1]])
 # create xdmf element
@@ -198,6 +198,7 @@ for el,name in enumerate(hf['abundance']['a_name']):
 	if re.findall('\D\d',name):
 		element_name=re.sub('\d','',name)
 		name=re.sub('\D','',name) #find the transition between elements name and number
+		#If the grid for that element doesn't already exist create it 
 		if not grid.has_key('Abundance'+'/'+element_name):
 			grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
 			et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
@@ -208,7 +209,7 @@ for el,name in enumerate(hf['abundance']['a_name']):
 	superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(slices/10+1),Dimensions=extents_str)
 	n=1
 	for m in range(0, int((slices+10)/10)):
-		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(m))
+		fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_str)
 		for i in range(0,(slices-m*10)):
 			dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
 			et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
