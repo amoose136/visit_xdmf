@@ -84,19 +84,6 @@
           </DataItem>
         </DataItem>
       </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="mean_A">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab" Type="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/fluid/</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_02.h5:/fluid/</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_03.h5:/fluid/</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_04.h5:/fluid/</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Electron_fraction">
         <DataItem Dimensions="16 8 720" ItemType="HyperSlab" Type="HyperSlab">
           <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
