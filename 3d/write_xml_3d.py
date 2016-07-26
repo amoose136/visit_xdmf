@@ -102,8 +102,6 @@ except ImportError:
 
 import numpy as np
 import re
-
-
 #End Parser construction
 # On with bulk of code
 old_time=start_time
