@@ -142,7 +142,11 @@ for filename in args.files:
 	geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVYVZ")
 	coords=["x_ef","y_ef","z_ef"]
 	for n,coord_name in enumerate(coords):
-		hyperslab = et.SubElement(geometry, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab",Type="HyperSlab")
+		parent_element=geometry
+		if coord_name=='x_ef':
+			unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
+			parent_element=unit_changing_function
+		hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 		et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
 		et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = filename + ":/mesh/" + coord_name
 		
@@ -188,7 +192,7 @@ for filename in args.files:
 	# Loop through all standard scalars in "Hydro" grid
 	for name in storage_names:
 		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab",Type="HyperSlab")
+		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 		et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
 		superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
 		n=1
@@ -218,7 +222,7 @@ for filename in args.files:
 		for m in range(0, int((slices-1)/10)+1):
 			fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
 			for i in range(0,(slices-m*10)):
-				dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub, Type="HyperSlab")
+				dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 				et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 				if args.repeat==True:
 					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename + ":/abundance/xn_c"
