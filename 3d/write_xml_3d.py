@@ -35,11 +35,13 @@ parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='h5 files to process (1 or more args)')
 parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
-parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs=1, help='number of slices to use')
-parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs=1, help='specify the xmf file prefix')
+parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
+parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='use the first wedge for all slices')
-parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable to make script not run again on failure')
+parser.add_argument('--short',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
+parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
+parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 args=parser.parse_args()
 ##############################################################################################
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
@@ -118,8 +120,8 @@ for filename in args.files:
 
 	slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
 	if args.slices:
-		if not args.slices[0]>slices:
-			slices=args.slices[0]
+		if not args.slices>slices:
+			slices=args.slices
 		else:
 			eprint("Error: slices must not be more than the number of wedges")
 			sys.exit()
@@ -226,16 +228,28 @@ for filename in args.files:
 
 	# Write document tree to file
 	try:
-		f=open(filename[:-6]+'.xmf','w')
+		# explode filename into list
+		filename_part=filename.rsplit('_')
+		if args.prefix:
+			filename_part[0]=args.prefix
+		extension='.xmf'
+		if args.xdmf:
+			extension='.xdmf'
+		if args.shortfilename:
+			file_out_name=filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+		else:
+			file_out_name=filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		f=open(file_out_name,'w')
+		del extension
 		# if lxml module loaded
 		try:
 			f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
 		#other ElementTree writers
 		except:
 			f.close()
-			f=open(filename[:-6]+'.xmf','w')
+			f=open(file_out_name,'w')
 			if not args.quiet:
-				print("Writing "+filename+".xmf with improvised \"pretty print\"")
+				print("Writing "+file_out_name+" with improvised \"pretty print\"")
 			def prettify(elem):
 				rough_string = et.tostring(elem, 'utf-8')
 				reparsed = md.parseString(rough_string)
@@ -245,11 +259,11 @@ for filename in args.files:
 			# write custom doctype declaration
 			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n")
 			f.close()
-			f=open(filename[:-6]+'.xmf','a')
+			f=open(file_out_name,'a')
 			f.write(prettify(xdmf))
 		f.close()
 		if not args.quiet:
-			print("--- XMF file created in %s seconds ---" % (time.time()-old_time))
+			print("--- "+file_out_name+" created in %s seconds ---" % (time.time()-old_time))
 		old_time=time.time()
 	except:
 		eprint("Fatal error:")
