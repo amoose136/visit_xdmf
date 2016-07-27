@@ -33,12 +33,12 @@ except ImportError:
 ##############################################################################################
 parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h5 files")
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
-parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='h5 files to process (1 or more args)')
-parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
+parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
+# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
 parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
 parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
-parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='use the first wedge for all slices')
+parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 parser.add_argument('--short',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
