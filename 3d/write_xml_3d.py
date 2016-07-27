@@ -5,8 +5,9 @@ import time
 start_time = time.time()
 # Import all the things robustly
 ##############################################################################################
-import sys, os, math, socket, argparse
+import sys, os, math, socket, argparse, re
 import subprocess as sp
+import numpy as np
 from pdb import set_trace as br
 
 #define an error printing function for more accurate error reporting to terminal
@@ -34,7 +35,7 @@ except ImportError:
 parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h5 files")
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
-# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop to')
+# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
 parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
 parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
@@ -101,12 +102,10 @@ except ImportError:
 						print("running with ElementTree")
 				except ImportError:
 					eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
-
-import numpy as np
-import re
 #End Parser construction
+#######################################################################################################
 # On with bulk of code
-old_time=start_time
+old_time=start_time # for speed diagnostics
 for filename in args.files:
 	hf = h5py.File(filename,'r')
 	dims=[]
@@ -206,11 +205,10 @@ for filename in args.files:
 				n+=1	
 	# Now loop through all the abundance elements and generate hyperslabs
 	for el,name in enumerate(hf['abundance']['a_name']):
-		if re.findall('\D\d',name):
-			element_name=re.sub('\d','',name)
+		if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
+			element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 			name=re.sub('\D','',name) #find the transition between elements name and number
-			#If the grid for that element doesn't already exist create it 
-			if not grid.has_key('Abundance'+'/'+element_name):
+			if not grid.has_key('Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
 				grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
 				et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 				et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
