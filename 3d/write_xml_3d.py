@@ -1,10 +1,10 @@
-#!python
+#!/usr/bin/python
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
 start_time = time.time()
 # Import all the things robustly
-##############################################################################################
+############################################################################################################################################################################################
 import sys, os, math, socket, argparse, re
 import subprocess as sp
 import numpy as np
@@ -31,8 +31,8 @@ except ImportError:
 	eprint ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
 	sys.exit()
 # Contstruct Parser
-##############################################################################################
-parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h5 files")
+############################################################################################################################################################################################
+parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera hdf5 files")
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 # parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
@@ -44,7 +44,8 @@ parser.add_argument('--short',dest='shortfilename',action='store_const',const=Tr
 parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 args=parser.parse_args()
-##############################################################################################
+#End Parser construction
+#####################################################################################################################################################################################################
 #This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
 try:
 	#Most likly to fail part.
@@ -102,8 +103,7 @@ except ImportError:
 						print("running with ElementTree")
 				except ImportError:
 					eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
-#End Parser construction
-#######################################################################################################
+############################################################################################################################################################################################
 # On with bulk of code
 old_time=start_time # for speed diagnostics
 for filename in args.files:
@@ -134,7 +134,8 @@ for filename in args.files:
 	# create Domain element
 	domain = et.SubElement(xdmf,"Domain")
 
-	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts 
+	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
+	############################################################################################################################################################################################
 	grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
 			'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
 	et.SubElement(grid['Hydro'],"Topology",TopologyType="3DRectMesh",NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
@@ -152,6 +153,7 @@ for filename in args.files:
 	et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 	et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 	et.SubElement(grid['Abundance'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
+	############################################################################################################################################################################################
 	# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
 	storage_names = { 
 		"Entropy":"entropy",
@@ -172,7 +174,8 @@ for filename in args.files:
 		# "mean_A":"",#computed quantity to be added later
 		"nse_flag":"e_int",
 	}
-	# The following is functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
+	# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
+	############################################################################################################################################################################################
 	m=dims[:]
 	m[2]=extents[2]
 	block_string=' '.join([str(x) for x in m[::-1]])
@@ -189,6 +192,7 @@ for filename in args.files:
 	def extents_stri(m):
 		return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 	# Loop through all standard scalars in "Hydro" grid
+	############################################################################################################################################################################################
 	for name in storage_names:
 		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
@@ -202,7 +206,8 @@ for filename in args.files:
 					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
 				else:
 					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
-				n+=1	
+				n+=1
+	############################################################################################################################################################################################
 	# Now loop through all the abundance elements and generate hyperslabs
 	for el,name in enumerate(hf['abundance']['a_name']):
 		if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
@@ -227,8 +232,8 @@ for filename in args.files:
 				else:
 					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
 				n+=1
-
 	# Write document tree to file
+	############################################################################################################################################################################################
 	try:
 		# explode filename into list
 		filename_part=filename.rsplit('_')
@@ -243,10 +248,10 @@ for filename in args.files:
 			file_out_name=filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
 		f=open(file_out_name,'w')
 		del extension
-		# if lxml module loaded
+		# if lxml module loaded use it to write document (fasted, simplest implementation):
 		try:
 			f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
-		#other ElementTree writers
+		#other ElementTree writers can use this slower writer that does the same thing:
 		except:
 			f.close()
 			f=open(file_out_name,'w')
@@ -255,8 +260,8 @@ for filename in args.files:
 			def prettify(elem):
 				rough_string = et.tostring(elem, 'utf-8')
 				reparsed = md.parseString(rough_string)
-				t = reparsed.toprettyxml(indent="\t")
-				t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration
+				t = reparsed.toprettyxml(indent="   ")#lxml prettyprint uses 3 spaces per step so we do here as well
+				t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 				return t
 			# write custom doctype declaration
 			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n")
@@ -270,3 +275,6 @@ for filename in args.files:
 	except:
 		eprint("Fatal error:")
 		sys.exit(["	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug"])
+	############################################################################################################################################################################################
+#end loop over all hdf5 files
+############################################################################################################################################################################################
