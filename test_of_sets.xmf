@@ -1,7 +1,8 @@
 <?xml version="1.0" ?>
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" []>
-<Xdmf Version="3.0">
+<Xdmf Version="2.0">
 <Domain>
+<Grid>
 <Set Name="Ids" SetType="Face">
     <DataItem Format="XML" Dimensions="4" >
         1 2 3 4
@@ -15,5 +16,6 @@
         </DataItem>
     </Attribute>
 </Set>
+</Grid>
 </Domain>
 </Xdmf>

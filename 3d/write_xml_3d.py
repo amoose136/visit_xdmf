@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import print_function
 # For diagnostics, time the execution of the code
-import time
+import time, six
 start_time = time.time()
 # Import all the things robustly
 ############################################################################################################################################################################################
@@ -20,18 +20,18 @@ if socket.gethostname()[:4]=='rhea':
 # For my laptop
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
-try:
-	import visit
-	import visit_utils
-except ImportError:
-	eprint("Error: visit module import failed\n")
-	eprint('Please make sure visit\'s path is in $PATH')
-	eprint('	( /path/to/visit/bin )')
-	eprint('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
-	eprint ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
-	sys.exit()
-# Contstruct Parser
+# try:
+# 	import visit
+# 	import visit_utils
+# except ImportError:
+# 	eprint("Error: visit module import failed\n")
+# 	eprint('Please make sure visit\'s path is in $PATH')
+# 	eprint('	( /path/to/visit/bin )')
+# 	eprint('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
+# 	eprint ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
+# 	sys.exit()
 ############################################################################################################################################################################################
+# Contstruct Parser:
 parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera hdf5 files")
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
@@ -134,8 +134,8 @@ for filename in args.files:
 	# create Domain element
 	domain = et.SubElement(xdmf,"Domain")
 
-	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
 	############################################################################################################################################################################################
+	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
 	grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
 			'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
 	et.SubElement(grid['Hydro'],"Topology",TopologyType="3DRectMesh",NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
@@ -174,8 +174,8 @@ for filename in args.files:
 		# "mean_A":"",#computed quantity to be added later
 		"nse_flag":"e_int",
 	}
-	# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
 	############################################################################################################################################################################################
+	# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
 	m=dims[:]
 	m[2]=extents[2]
 	block_string=' '.join([str(x) for x in m[::-1]])
@@ -191,8 +191,8 @@ for filename in args.files:
 		return str(dims[2]/n_hyperslabs*m)+" "+str(dims[1])+" "+str(dims[0])
 	def extents_stri(m):
 		return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
-	# Loop through all standard scalars in "Hydro" grid
 	############################################################################################################################################################################################
+	# Loop through all standard scalars in "Hydro" grid
 	for name in storage_names:
 		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
@@ -232,8 +232,8 @@ for filename in args.files:
 				else:
 					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
 				n+=1
-	# Write document tree to file
 	############################################################################################################################################################################################
+	# Write document tree to file
 	try:
 		# explode filename into list
 		filename_part=filename.rsplit('_')
