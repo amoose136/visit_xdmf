@@ -36,11 +36,11 @@ parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera h
 # parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 # parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
-parser.add_argument('--slices','-s',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
+parser.add_argument('--slices',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
 parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
-parser.add_argument('--short',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
+parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 args=parser.parse_args()
@@ -203,9 +203,9 @@ for filename in args.files:
 			fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
 			for i in range(0,min(slices-m*10,10)):
 				if args.repeat:
-					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename + ":/fluid/" + storage_names[name]
+					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01.h5:/fluid/" + storage_names[name]
 				else:
-					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
+					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
 				n+=1
 	############################################################################################################################################################################################
 	# Now loop through all the abundance elements and generate hyperslabs
@@ -228,9 +228,9 @@ for filename in args.files:
 				dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 				et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 				if args.repeat==True:
-					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename + ":/abundance/xn_c"
+					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01.h5:/abundance/xn_c"
 				else:
-					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= filename[:-5] + str(format(n, '02d')) + ".h5:/abundance/xn_c"
+					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + ".h5:/abundance/xn_c"
 				n+=1
 	############################################################################################################################################################################################
 	# Write document tree to file
@@ -250,21 +250,32 @@ for filename in args.files:
 		del extension
 		# if lxml module loaded use it to write document (fasted, simplest implementation):
 		try:
-			f.write(et.tostring(xdmf,pretty_print=True,xml_declaration=True,doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>"))
+			f.write(\
+				re.sub(\
+					'&amp;','&',et.tostring(xdmf,\
+						pretty_print=True,\
+						xml_declaration=True,\
+						encoding="ASCII",\
+						doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+filename[:-5]+"\">\n]>"\
+						)\
+				)\
+			)
 		#other ElementTree writers can use this slower writer that does the same thing:
 		except:
 			f.close()
+			import xml.etree.cElementTree as et
+			import xml.dom.minidom as md
 			f=open(file_out_name,'w')
 			if not args.quiet:
 				print("Writing "+file_out_name+" with improvised \"pretty print\"")
 			def prettify(elem):
-				rough_string = et.tostring(elem, 'utf-8')
+				rough_string = et.tostring(elem, 'ASCII')
 				reparsed = md.parseString(rough_string)
-				t = reparsed.toprettyxml(indent="   ")#lxml prettyprint uses 3 spaces per step so we do here as well
+				t = re.sub('&amp;','&',reparsed.toprettyxml(indent="  "))#lxml prettyprint uses 2 spaces per step so we do here as well
 				t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 				return t
 			# write custom doctype declaration
-			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" []>\n")
+			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+filename[:-5]+"\">\n]>\n")
 			f.close()
 			f=open(file_out_name,'a')
 			f.write(prettify(xdmf))
@@ -274,7 +285,8 @@ for filename in args.files:
 		old_time=time.time()
 	except:
 		eprint("Fatal error:")
-		sys.exit(["	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug"])
+		eprint("	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug")
+		sys.exit()
 	############################################################################################################################################################################################
 #end loop over all hdf5 files
 ############################################################################################################################################################################################
