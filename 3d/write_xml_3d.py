@@ -250,7 +250,9 @@ for filename in args.files:
 		del extension
 		# if lxml module loaded use it to write document (fasted, simplest implementation):
 		try:
+			#write to file:
 			f.write(\
+				#remove all the '&amp;' tags that appear and replace with '&' so the aliasing works
 				re.sub(\
 					'&amp;','&',et.tostring(xdmf,\
 						pretty_print=True,\
