@@ -41,7 +41,8 @@ parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',t
 parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
-parser.add_argument('--disable',dest='disable',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
+parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
+parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiative components')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 args=parser.parse_args()
 #End Parser construction
@@ -56,20 +57,20 @@ except ImportError:
 		if not args.quiet:
 			print("Trying to run under reloaded modules")
 		try:
-			if not args.run:
+			if not args.norepeat:
 				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python "+(' '.join(sys.argv))+" --norepeat"],shell=True)
 			else:
-				raise ValueError('aw crap')
+				raise ValueError('aw crap, already reloaded and still failed to import something')
 		except:
 			#redo the offending call so the error can display
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
 			eprint("Could not import modules")
 			raise ValueError('aw crap')
-		sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python "+(' '.join(sys.argv))+" --run"],shell=True)
 		if not args.quiet:
 			print("Finished")
 	except:
-		eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading is impossible without h5py.")
+		eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
 	sys.exit()
 #Robustly import an xml writer/parser
 try:
@@ -116,7 +117,35 @@ for filename in args.files:
 	extents.append(hf['mesh']['theta_index_bound'][1])
 	extents.append(hf['mesh']['phi_index_bound'][1])
 	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
-
+	
+	############################################################################################################################################################################################
+	# compute luminosity auxilary variabes
+	n_groups=hf['radiation']['raddim'][0]
+	n_species=hf['radiation']['raddim'][1]
+	energy_edge=hf['radiation']['unubi'].value
+	energy_center=hf['radiation']['unui'].value
+	d_energy=[]
+	for i in range(0,n_groups):
+		d_energy.append(energy_edge[i+1]-energy_edge[i])
+	d_energy=np.array(d_energy)
+	e3de = energy_center**3*d_energy
+	e5de = energy_center**5*d_energy
+	cvel=2.99792458e10
+	pi=3.141592653589793
+	ergmev = 1.602177e-6
+	h = 4.13567e-21
+	ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
+	############################################################################################################################################################################################
+	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
+	processed_suffix='_pro'
+	if filename[-7:-3]!='_pro':
+		processed_suffix='' #temporary fix
+	# 	old_filename=filename
+	# 	filename=filename[0:-3]+'_pro.h5'
+	# 	os.rename(old_filename,filename)
+		# if not args.quiet:
+			# print(old_filename+" renamed to "+filename+".")
+			# print(Processed data added to h5 file)
 	slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
 	if args.slices:
 		if not args.slices>slices:
@@ -137,7 +166,8 @@ for filename in args.files:
 	############################################################################################################################################################################################
 	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
 	grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
-			'Abundance':et.SubElement(domain,"Grid",Name="Abundance")}
+			'Abundance':et.SubElement(domain,"Grid",Name="Abundance"),
+			'Radiation':et.SubElement(domain,"Grid",Name="Radiation")}
 	et.SubElement(grid['Hydro'],"Topology",TopologyType="3DRectMesh",NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 	geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVYVZ")
 	coords=["x_ef","y_ef","z_ef"]
@@ -153,32 +183,14 @@ for filename in args.files:
 	et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 	et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 	et.SubElement(grid['Abundance'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
-	############################################################################################################################################################################################
-	# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
-	storage_names = { 
-		"Entropy":"entropy",
-		"v_radial":"u_c",
-		"v_theta":"v_c",
-		"v_phi":"w_c",
-		"BruntViasala_freq":"wBVMD",
-		"Electron_fraction":"ye_c",
-		"Gravity_phi":"grav_x_c",
-		"Gravity_r":"grav_y_c",
-		"Gravity_theta":"grav_z_c",
-		"Lepton_fraction":"ylep",
-		"Mach_number":"v_csound",
-		"Neutrino_Heating_rate":"dudt_nu",
-		"Nuclear_Heating_rate":"dudt_nuc",
-		"Pressure":"press",
-		"Temperature":"t_c",
-		# "mean_A":"",#computed quantity to be added later
-		"nse_flag":"e_int",
-	}
+	et.SubElement(grid['Radiation'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+	et.SubElement(grid['Radiation'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")	
 	############################################################################################################################################################################################
 	# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
 	m=dims[:]
 	m[2]=extents[2]
 	block_string=' '.join([str(x) for x in m[::-1]])
+	#block_string is a string that uses extents for the radial component and dims for the others
 	def function_str(m):
 		function_stri="JOIN("
 		function_str_array=[]
@@ -193,45 +205,119 @@ for filename in args.files:
 		return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 	############################################################################################################################################################################################
 	# Loop through all standard scalars in "Hydro" grid
-	for name in storage_names:
-		at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
-		et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-		superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
-		n=1
-		for m in range(0, int((slices-1)/10)+1):
-			fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
-			for i in range(0,min(slices-m*10,10)):
-				if args.repeat:
-					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01.h5:/fluid/" + storage_names[name]
-				else:
-					et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + ".h5:/fluid/" + storage_names[name]
-				n+=1
+	if not args.disable or "hydro" not in args.disable:
+		# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
+		storage_names = { 
+			"Entropy":"entropy",
+			"v_radial":"u_c",
+			"v_theta":"v_c",
+			"v_phi":"w_c",
+			"BruntViasala_freq":"wBVMD",
+			"Electron_fraction":"ye_c",
+			"Gravity_phi":"grav_x_c",
+			"Gravity_r":"grav_y_c",
+			"Gravity_theta":"grav_z_c",
+			"Lepton_fraction":"ylep",
+			"Mach_number":"v_csound",
+			"Neutrino_Heating_rate":"dudt_nu",
+			"Nuclear_Heating_rate":"dudt_nuc",
+			"Pressure":"press",
+			"Temperature":"t_c",
+			# "mean_A":"",#computed quantity to be added later
+			"nse_flag":"e_int",
+		}
+		for name in storage_names:
+			at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
+			superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
+			n=1
+			for m in range(0, int((slices-1)/10)+1):
+				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
+				for i in range(0,min(slices-m*10,10)):
+					if args.repeat:
+						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01_pro.h5:/fluid/" + storage_names[name]
+					else:
+						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/fluid/" + storage_names[name]
+					n+=1
 	############################################################################################################################################################################################
 	# Now loop through all the abundance elements and generate hyperslabs
-	for el,name in enumerate(hf['abundance']['a_name']):
-		if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
-			element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
-			name=re.sub('\D','',name) #find the transition between elements name and number
-			if not grid.has_key('Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
-				grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
-				et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-				et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
-			attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-		else:
-			attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-		superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
-		n=1
-		for m in range(0, int((slices-1)/10)+1):
-			fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
-			for i in range(0,(slices-m*10)):
-				dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
-				et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
-				if args.repeat==True:
-					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01.h5:/abundance/xn_c"
-				else:
-					et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + ".h5:/abundance/xn_c"
-				n+=1
+	if not args.disable or "abundance" not in args.disable:
+		for el,name in enumerate(hf['abundance']['a_name']):
+			if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
+				element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
+				name=re.sub('\D','',name) #find the transition between elements name and number
+				if not grid.has_key('Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+					grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
+					et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+					et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
+				attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+			else:
+				attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+			superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
+			n=1
+			for m in range(0, int((slices-1)/10)+1):
+				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
+				for i in range(0,(slices-m*10)):
+					dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
+					et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
+					if args.repeat==True:
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01_pro.h5:/abundance/xn_c"
+					else:
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/abundance/xn_c"
+					n+=1
+	############################################################################################################################################################################################
+	#Compute Luminosity variables
+	if not args.disable or "radiation" not in args.disable:
+		def integration_str(sp,n):
+			function_stri='SQRT(('
+			#numerator part:
+			function_str_array=[]
+			for m in range(0, int(n)):
+				function_str_array.append( "$0[:,:,:," + str(sp) + "," + str(m) + "]*" + str(e5de[m]) )
+			function_stri+="+".join(function_str_array)+")/("
+			#divisor part:
+			function_str_array=[]
+			for m in range(0, int(n)):
+				function_str_array.append( "$0[:,:,:," + str(sp) + "," + str(m) + "]*" + str(e3de[m]) )
+			function_str_array.append("1E-100") #epsilon addon
+			function_stri+="+".join(function_str_array)+"))"
+			return function_stri
+		for sp in range(0,n_species):
+			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_{RMS}_"+str(sp),AttributeType="Scalar")
+			Erms__math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function=integration_str(sp,n_groups),Dimensions=extents_str)
+			hyperslab = et.SubElement(Erms__math_fun,"DataItem",ItemType="HyperSlab",Dimensions=extents_str+" "+str(n_species)+" "+str(n_groups))
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
+			="0 0 0 0 0"+\
+			" 1 1 1 1 1 "+\
+			extents_str+" "+str(n_species)+" "+str(n_groups)
+			outer_join_fun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups))
+			n=1
+			for m in range(0, int((slices-1)/10)+1):
+				inner_join_fun = et.SubElement(outer_join_fun,\
+					"DataItem",\
+					ItemType="Function",\
+					Function=function_str(min([(slices-m*10),10])),\
+					Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
+					)
+				for i in range(0,min(slices-m*10,10)):
+					if args.repeat:
+						et.SubElement(inner_join_fun,\
+							"DataItem",\
+							Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+							NumberType="Float",\
+							Precision="8",\
+							Format="HDF"\
+							).text= "&h5path;01_pro.h5:/radiation/psi0_c"
+					else:
+						et.SubElement(inner_join_fun,\
+							"DataItem",\
+							Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+							NumberType="Float",\
+							Precision="8",\
+							Format="HDF"\
+							).text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/radiation/psi0_c"
+					n+=1
 	############################################################################################################################################################################################
 	# Write document tree to file
 	try:
@@ -249,16 +335,22 @@ for filename in args.files:
 		f=open(file_out_name,'w')
 		del extension
 		# if lxml module loaded use it to write document (fasted, simplest implementation):
+		entities={
+		"h5path":filename[:-5]
+		}
+		entity_str = ''
+		for entity in entities:
+			entity_str+="\n  "+entity
 		try:
 			#write to file:
 			f.write(\
-				#remove all the '&amp;' tags that appear and replace with '&' so the aliasing works
+				#remove all the '&amp;' tags that appear due to xml parser and replace with '&' so the aliasing works
 				re.sub(\
 					'&amp;','&',et.tostring(xdmf,\
 						pretty_print=True,\
 						xml_declaration=True,\
 						encoding="ASCII",\
-						doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+filename[:-5]+"\">\n]>"\
+						doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>"\
 						)\
 				)\
 			)
@@ -277,7 +369,7 @@ for filename in args.files:
 				t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 				return t
 			# write custom doctype declaration
-			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+filename[:-5]+"\">\n]>\n")
+			f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>\n")
 			f.close()
 			f=open(file_out_name,'a')
 			f.write(prettify(xdmf))
