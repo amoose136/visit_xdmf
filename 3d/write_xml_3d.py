@@ -42,7 +42,7 @@ parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=Tru
 parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiative components')
+parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiation components')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 args=parser.parse_args()
 #End Parser construction
@@ -138,6 +138,7 @@ for filename in args.files:
 	############################################################################################################################################################################################
 	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 	processed_suffix='_pro'
+	br()
 	if filename[-7:-3]!='_pro':
 		processed_suffix='' #temporary fix
 	# 	old_filename=filename
@@ -178,7 +179,7 @@ for filename in args.files:
 			parent_element=unit_changing_function
 		hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 		et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
-		et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = filename + ":/mesh/" + coord_name
+		et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = filename + processed_suffix + ":/mesh/" + coord_name
 		
 	et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 	et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
@@ -236,9 +237,9 @@ for filename in args.files:
 				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
 				for i in range(0,min(slices-m*10,10)):
 					if args.repeat:
-						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01_pro.h5:/fluid/" + storage_names[name]
+						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
 					else:
-						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/fluid/" + storage_names[name]
+						et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
 					n+=1
 	############################################################################################################################################################################################
 	# Now loop through all the abundance elements and generate hyperslabs
@@ -262,9 +263,9 @@ for filename in args.files:
 					dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 					et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 					if args.repeat==True:
-						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01_pro.h5:/abundance/xn_c"
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
 					else:
-						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/abundance/xn_c"
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
 					n+=1
 	############################################################################################################################################################################################
 	#Compute Luminosity variables
@@ -308,7 +309,7 @@ for filename in args.files:
 							NumberType="Float",\
 							Precision="8",\
 							Format="HDF"\
-							).text= "&h5path;01_pro.h5:/radiation/psi0_c"
+							).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
 					else:
 						et.SubElement(inner_join_fun,\
 							"DataItem",\
@@ -316,7 +317,7 @@ for filename in args.files:
 							NumberType="Float",\
 							Precision="8",\
 							Format="HDF"\
-							).text= "&h5path;" + str(format(n, '02d')) + "_pro.h5:/radiation/psi0_c"
+							).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
 					n+=1
 	############################################################################################################################################################################################
 	# Write document tree to file
