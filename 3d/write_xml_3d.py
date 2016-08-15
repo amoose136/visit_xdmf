@@ -138,7 +138,6 @@ for filename in args.files:
 	############################################################################################################################################################################################
 	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 	processed_suffix='_pro'
-	br()
 	if filename[-7:-3]!='_pro':
 		processed_suffix='' #temporary fix
 	# 	old_filename=filename
@@ -270,55 +269,67 @@ for filename in args.files:
 	############################################################################################################################################################################################
 	#Compute Luminosity variables
 	if not args.disable or "radiation" not in args.disable:
-		def integration_str(sp,n):
-			function_stri='SQRT(('
-			#numerator part:
-			function_str_array=[]
-			for m in range(0, int(n)):
-				function_str_array.append( "$0[:,:,:," + str(sp) + "," + str(m) + "]*" + str(e5de[m]) )
-			function_stri+="+".join(function_str_array)+")/("
-			#divisor part:
-			function_str_array=[]
-			for m in range(0, int(n)):
-				function_str_array.append( "$0[:,:,:," + str(sp) + "," + str(m) + "]*" + str(e3de[m]) )
-			function_str_array.append("1E-100") #epsilon addon
-			function_stri+="+".join(function_str_array)+"))"
-			return function_stri
+		# Define read-in for psi0_c once that will later be referenced in hyperslabs
+		outer_join_fun = et.SubElement(grid['Radiation'],"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups),Name="psi0_c")
+		n=1
+		for m in range(0, int((slices-1)/10)+1):
+			inner_join_fun = et.SubElement(outer_join_fun,\
+				"DataItem",\
+				ItemType="Function",\
+				Function=function_str(min([(slices-m*10),10])),\
+				Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
+				)
+			for i in range(0,min(slices-m*10,10)):
+				if args.repeat:
+					et.SubElement(inner_join_fun,\
+						"DataItem",\
+						Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+						NumberType="Float",\
+						Precision="8",\
+						Format="HDF"\
+						).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
+				else:
+					et.SubElement(inner_join_fun,\
+						"DataItem",\
+						Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+						NumberType="Float",\
+						Precision="8",\
+						Format="HDF"\
+						).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
+				n+=1
+		# end definition of psi0_c read-in
+		def integration_loop(integration_measure):
+			outer_sum = et.SubElement(Erms_math_fun,"DataItem",ItemType="Function",Dimensions=extents_str)
+			outer_function_str = ''
+			outer_function_str_array = []
+			for n in range(0, int((n_groups-1)/10)+1):
+				function_stri=''
+				function_str_array=[]
+				outer_function_str_array.append('$'+str(n))
+				inner_sum=et.SubElement(outer_sum, "DataItem",ItemType="Function",Dimensions=extents_str)
+				for i in range(0,min(n_groups-n*10,10)):
+					hyperslab=et.SubElement(inner_sum,"DataItem",ItemType="HyperSlab", Dimensions=extents_str)	
+					function_str_array.append( "$" + str(i) + "*" + str(integration_measure[i+n*10]) )
+					et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
+					="0 0 0 "+str(sp)+" "+str(n*10+i)+\
+					" 1 1 1 1 1 "+\
+					extents_str+" 1 1" # eg: 180 180 540 1 1
+					et.SubElement(hyperslab,"DataItem",Reference="/*//DataItem[@Name='psi0_c']")
+				function_stri+=" + ".join(function_str_array)
+				inner_sum.attrib['Function'] = function_stri
+				# inner_sum.attrib['Function'] = "$0"
+
+			outer_function_str+=" + ".join(outer_function_str_array)
+			outer_sum.attrib['Function'] = outer_function_str
+			# outer_sum.attrib['Function'] = "$0"
+ 
+
 		for sp in range(0,n_species):
-			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_{RMS}_"+str(sp),AttributeType="Scalar")
-			Erms__math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function=integration_str(sp,n_groups),Dimensions=extents_str)
-			hyperslab = et.SubElement(Erms__math_fun,"DataItem",ItemType="HyperSlab",Dimensions=extents_str+" "+str(n_species)+" "+str(n_groups))
-			et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
-			="0 0 0 0 0"+\
-			" 1 1 1 1 1 "+\
-			extents_str+" "+str(n_species)+" "+str(n_groups)
-			outer_join_fun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups))
-			n=1
-			for m in range(0, int((slices-1)/10)+1):
-				inner_join_fun = et.SubElement(outer_join_fun,\
-					"DataItem",\
-					ItemType="Function",\
-					Function=function_str(min([(slices-m*10),10])),\
-					Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
-					)
-				for i in range(0,min(slices-m*10,10)):
-					if args.repeat:
-						et.SubElement(inner_join_fun,\
-							"DataItem",\
-							Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-							NumberType="Float",\
-							Precision="8",\
-							Format="HDF"\
-							).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
-					else:
-						et.SubElement(inner_join_fun,\
-							"DataItem",\
-							Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-							NumberType="Float",\
-							Precision="8",\
-							Format="HDF"\
-							).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
-					n+=1
+			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_{RMS}_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+			Erms_math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function="SQRT($0 / ( $1 + .000000000000000000000000000000000000000000000000001 ))",Dimensions=extents_str)
+			integration_loop(e5de)
+			integration_loop(e3de)
+
 	############################################################################################################################################################################################
 	# Write document tree to file
 	try:
