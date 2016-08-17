@@ -10,227 +10,19 @@
         <DataItem Dimensions="721" Function="$0/100000" ItemType="Function">
           <DataItem Dimensions="721" ItemType="HyperSlab">
             <DataItem Dimensions="3 1" Format="XML">0 1 721</DataItem>
-            <DataItem Dimensions="723" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/x_ef</DataItem>
+            <DataItem Dimensions="723" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/x_ef</DataItem>
           </DataItem>
         </DataItem>
         <DataItem Dimensions="9" ItemType="HyperSlab">
           <DataItem Dimensions="3 1" Format="XML">0 1 9</DataItem>
-          <DataItem Dimensions="9" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/y_ef</DataItem>
+          <DataItem Dimensions="9" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/y_ef</DataItem>
         </DataItem>
         <DataItem Dimensions="17" ItemType="HyperSlab">
           <DataItem Dimensions="3 1" Format="XML">0 1 17</DataItem>
-          <DataItem Dimensions="17" Format="HDF" NumberType="Float" Precision="8">chimera_00400_grid_1_01.h5:/mesh/z_ef</DataItem>
+          <DataItem Dimensions="17" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/z_ef</DataItem>
         </DataItem>
       </Geometry>
       <Time Value="0.0620003769469"/>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Temperature">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/t_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/t_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/t_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/t_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Mach_number">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/v_csound</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/v_csound</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/v_csound</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/v_csound</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Pressure">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/press</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/press</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/press</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/press</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="BruntViasala_freq">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/wBVMD</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/wBVMD</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/wBVMD</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/wBVMD</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="nse_flag">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/e_int</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/e_int</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/e_int</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/e_int</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Electron_fraction">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/ye_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/ye_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/ye_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/ye_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Gravity_phi">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/grav_x_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/grav_x_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/grav_x_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/grav_x_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Lepton_fraction">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/ylep</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/ylep</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/ylep</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/ylep</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Entropy">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/entropy</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/entropy</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/entropy</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/entropy</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Nuclear_Heating_rate">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/dudt_nuc</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/dudt_nuc</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/dudt_nuc</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/dudt_nuc</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Neutrino_Heating_rate">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/dudt_nu</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/dudt_nu</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/dudt_nu</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/dudt_nu</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Gravity_r">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/grav_y_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/grav_y_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/grav_y_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/grav_y_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="v_theta">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/v_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/v_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/v_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/v_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="Gravity_theta">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/grav_z_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/grav_z_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/grav_z_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/grav_z_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="v_phi">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/w_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/w_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/w_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/w_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="v_radial">
-        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
-          <DataItem Dimensions="16 8 722" Function="JOIN($0)" ItemType="Function">
-            <DataItem Dimensions="16 8 722" Function="JOIN($0; $1; $2; $3)" ItemType="Function">
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;01_pro.h5:/fluid/u_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;02_pro.h5:/fluid/u_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;03_pro.h5:/fluid/u_c</DataItem>
-              <DataItem Dimensions="4 8 722" Format="HDF" NumberType="Float" Precision="8">&h5path;04_pro.h5:/fluid/u_c</DataItem>
-            </DataItem>
-          </DataItem>
-        </DataItem>
-      </Attribute>
     </Grid>
     <Grid Name="Abundance">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
@@ -239,6 +31,12 @@
     <Grid Name="Radiation">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
       <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="16 8 720" Name="E_RMS_1">
+        <DataItem Dimensions="16 8 720" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 16 8 720</DataItem>
+          <DataItem Dimensions="16 8 722" Format="HDF">&h5path;aux.h5:/radiation/E_RMS</DataItem>
+        </DataItem>
+      </Attribute>
     </Grid>
   </Domain>
 </Xdmf>

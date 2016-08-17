@@ -1,0 +1,60 @@
+<?xml version='1.0' encoding='ASCII'?>
+<!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" [
+  <!ENTITY h5path "chimera_003800000_grid_1_">
+]>
+<Xdmf Version="2.0">
+  <Domain>
+    <Grid Name="Hydro">
+      <Topology NumberOfElements="181 181 541" TopologyType="3DRectMesh"/>
+      <Geometry GeometryType="VXVYVZ">
+        <DataItem Dimensions="541" Function="$0/100000" ItemType="Function">
+          <DataItem Dimensions="541" ItemType="HyperSlab">
+            <DataItem Dimensions="3 1" Format="XML">0 1 541</DataItem>
+            <DataItem Dimensions="543" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/x_ef</DataItem>
+          </DataItem>
+        </DataItem>
+        <DataItem Dimensions="181" ItemType="HyperSlab">
+          <DataItem Dimensions="3 1" Format="XML">0 1 181</DataItem>
+          <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/y_ef</DataItem>
+        </DataItem>
+        <DataItem Dimensions="181" ItemType="HyperSlab">
+          <DataItem Dimensions="3 1" Format="XML">0 1 181</DataItem>
+          <DataItem Dimensions="181" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/mesh/z_ef</DataItem>
+        </DataItem>
+      </Geometry>
+      <Time Value="0.437970399631"/>
+    </Grid>
+    <Grid Name="Abundance">
+      <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
+      <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
+    </Grid>
+    <Grid Name="Radiation">
+      <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
+      <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_0">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_0</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_1">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_1</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_2">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_2</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_3">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_3</DataItem>
+        </DataItem>
+      </Attribute>
+    </Grid>
+  </Domain>
+</Xdmf>

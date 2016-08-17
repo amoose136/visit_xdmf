@@ -44,6 +44,7 @@ parser.add_argument('--short','-s',dest='shortfilename',action='store_const',con
 parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiation components')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
+parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
 args=parser.parse_args()
 #End Parser construction
 #####################################################################################################################################################################################################
@@ -118,24 +119,6 @@ for filename in args.files:
 	extents.append(hf['mesh']['phi_index_bound'][1])
 	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 	
-	############################################################################################################################################################################################
-	# compute luminosity auxilary variabes
-	n_groups=hf['radiation']['raddim'][0]
-	n_species=hf['radiation']['raddim'][1]
-	energy_edge=hf['radiation']['unubi'].value
-	energy_center=hf['radiation']['unui'].value
-	d_energy=[]
-	for i in range(0,n_groups):
-		d_energy.append(energy_edge[i+1]-energy_edge[i])
-	d_energy=np.array(d_energy)
-	e3de = energy_center**3*d_energy
-	e5de = energy_center**5*d_energy
-	cvel=2.99792458e10
-	pi=3.141592653589793
-	ergmev = 1.602177e-6
-	h = 4.13567e-21
-	ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
-	############################################################################################################################################################################################
 	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 	processed_suffix='_pro'
 	if filename[-7:-3]!='_pro':
@@ -153,6 +136,70 @@ for filename in args.files:
 		else:
 			eprint("Error: slices must not be more than the number of wedges")
 			sys.exit()
+
+	############################################################################################################################################################################################
+	# compute luminosity auxilary variabes
+	if args.aux:
+		if not args.quiet:
+			print("Creating auxilary computed values")
+		n_groups=hf['radiation']['raddim'][0]
+		n_species=hf['radiation']['raddim'][1]
+		energy_edge=hf['radiation']['unubi'].value
+		energy_center=hf['radiation']['unui'].value
+		d_energy=[]
+		for i in range(0,n_groups):
+			d_energy.append(energy_edge[i+1]-energy_edge[i])
+		d_energy=np.array(d_energy)
+		e3de = energy_center**3*d_energy
+		e5de = energy_center**5*d_energy
+		cvel=2.99792458e10
+		pi=3.141592653589793
+		ergmev = 1.602177e-6
+		h = 4.13567e-21
+		ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
+
+		aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
+		aux_hf.create_group("/radiation")
+		psi0_c=hf['radiation']['psi0_c']
+		E_RMS_array=[]
+		j=0
+		for i in xrange(1,slices+1):
+			j+=1
+			if args.repeat:
+				i=1
+			if not args.quiet:
+				print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			psi0_c=temp_hf['radiation']['psi0_c'][:]
+			# br()
+			for n in range(0,n_species):
+				if not args.quiet:
+					print("	Computing E_RMS_"+str(n))
+				E_RMS_array.append([])
+				numerator = psi0_c[:,:,:,n,0]*e5de[0]
+				denominator = psi0_c[:,:,:,n,0]*e3de[0]
+				for i in xrange(1,n_groups):
+					numerator+=psi0_c[:,:,:,n,i]*e5de[i]
+					denominator+= psi0_c[:,:,:,n,i]*e3de[i]
+				E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
+		del j, psi0_c
+		
+		for n in xrange(0,n_species):
+			if not args.quiet:
+				print("Concatenating E_RMS_"+str(n)+" results...")
+			E_RMS=np.concatenate(E_RMS_array[n])
+			if not args.quiet:
+				print("Writing E_RMS_"+str(n)+" out to file")
+			aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
+			del E_RMS
+		aux_hf.close()
+		del aux_hf,E_RMS_array
+
+	
+
+	############################################################################################################################################################################################
+	
+
 	extents[2]=extents[2]/n_hyperslabs*slices
 	dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
 	extents_sub = str(dims[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
@@ -267,68 +314,72 @@ for filename in args.files:
 						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
 					n+=1
 	############################################################################################################################################################################################
-	#Compute Luminosity variables
+	##Compute Luminosity variable using dumb hyperslabs
 	if not args.disable or "radiation" not in args.disable:
-		# Define read-in for psi0_c once that will later be referenced in hyperslabs
-		outer_join_fun = et.SubElement(grid['Radiation'],"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups),Name="psi0_c")
-		n=1
-		for m in range(0, int((slices-1)/10)+1):
-			inner_join_fun = et.SubElement(outer_join_fun,\
-				"DataItem",\
-				ItemType="Function",\
-				Function=function_str(min([(slices-m*10),10])),\
-				Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
-				)
-			for i in range(0,min(slices-m*10,10)):
-				if args.repeat:
-					et.SubElement(inner_join_fun,\
-						"DataItem",\
-						Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-						NumberType="Float",\
-						Precision="8",\
-						Format="HDF"\
-						).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
-				else:
-					et.SubElement(inner_join_fun,\
-						"DataItem",\
-						Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-						NumberType="Float",\
-						Precision="8",\
-						Format="HDF"\
-						).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
-				n+=1
-		# end definition of psi0_c read-in
-		def integration_loop(integration_measure):
-			outer_sum = et.SubElement(Erms_math_fun,"DataItem",ItemType="Function",Dimensions=extents_str)
-			outer_function_str = ''
-			outer_function_str_array = []
-			for n in range(0, int((n_groups-1)/10)+1):
-				function_stri=''
-				function_str_array=[]
-				outer_function_str_array.append('$'+str(n))
-				inner_sum=et.SubElement(outer_sum, "DataItem",ItemType="Function",Dimensions=extents_str)
-				for i in range(0,min(n_groups-n*10,10)):
-					hyperslab=et.SubElement(inner_sum,"DataItem",ItemType="HyperSlab", Dimensions=extents_str)	
-					function_str_array.append( "$" + str(i) + "*" + str(integration_measure[i+n*10]) )
-					et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
-					="0 0 0 "+str(sp)+" "+str(n*10+i)+\
-					" 1 1 1 1 1 "+\
-					extents_str+" 1 1" # eg: 180 180 540 1 1
-					et.SubElement(hyperslab,"DataItem",Reference="/*//DataItem[@Name='psi0_c']")
-				function_stri+=" + ".join(function_str_array)
-				inner_sum.attrib['Function'] = function_stri
-				# inner_sum.attrib['Function'] = "$0"
+	# Define read-in for psi0_c once that will later be referenced in hyperslabs
+	# 	outer_join_fun = et.SubElement(grid['Radiation'],"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups),Name="psi0_c")
+	# 	n=1
+	# 	for m in range(0, int((slices-1)/10)+1):
+	# 		inner_join_fun = et.SubElement(outer_join_fun,\
+	# 			"DataItem",\
+	# 			ItemType="Function",\
+	# 			Function=function_str(min([(slices-m*10),10])),\
+	# 			Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
+	# 			)
+	# 		for i in range(0,min(slices-m*10,10)):
+	# 			if args.repeat:
+	# 				et.SubElement(inner_join_fun,\
+	# 					"DataItem",\
+	# 					Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+	# 					NumberType="Float",\
+	# 					Precision="8",\
+	# 					Format="HDF"\
+	# 					).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
+	# 			else:
+	# 				et.SubElement(inner_join_fun,\
+	# 					"DataItem",\
+	# 					Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
+	# 					NumberType="Float",\
+	# 					Precision="8",\
+	# 					Format="HDF"\
+	# 					).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
+	# 			n+=1
+	# 	# end definition of psi0_c read-in
+	# 	def integration_loop(integration_measure):
+	# 		outer_sum = et.SubElement(Erms_math_fun,"DataItem",ItemType="Function",Dimensions=extents_str)
+	# 		outer_function_str = ''
+	# 		outer_function_str_array = []
+	# 		for n in range(0, int((n_groups-1)/10)+1):
+	# 			function_stri=''
+	# 			function_str_array=[]
+	# 			outer_function_str_array.append('$'+str(n))
+	# 			inner_sum=et.SubElement(outer_sum, "DataItem",ItemType="Function",Dimensions=extents_str)
+	# 			for i in range(0,min(n_groups-n*10,10)):
+	# 				hyperslab=et.SubElement(inner_sum,"DataItem",ItemType="HyperSlab", Dimensions=extents_str)	
+	# 				function_str_array.append( "$" + str(i) + "*" + str(integration_measure[i+n*10]) )
+	# 				et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
+	# 				="0 0 0 "+str(sp)+" "+str(n*10+i)+\
+	# 				" 1 1 1 1 1 "+\
+	# 				extents_str+" 1 1" # eg: 180 180 540 1 1
+	# 				et.SubElement(hyperslab,"DataItem",Reference="/*//DataItem[@Name='psi0_c']")
+	# 			function_stri+=" + ".join(function_str_array)
+	# 			inner_sum.attrib['Function'] = function_stri
+	# 			# inner_sum.attrib['Function'] = "$0"
 
-			outer_function_str+=" + ".join(outer_function_str_array)
-			outer_sum.attrib['Function'] = outer_function_str
-			# outer_sum.attrib['Function'] = "$0"
+	# 		outer_function_str+=" + ".join(outer_function_str_array)
+	# 		outer_sum.attrib['Function'] = outer_function_str
+	# 		# outer_sum.attrib['Function'] = "$0"
  
-
+		n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
 		for sp in range(0,n_species):
-			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_{RMS}_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
-			Erms_math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function="SQRT($0 / ( $1 + .000000000000000000000000000000000000000000000000001 ))",Dimensions=extents_str)
-			integration_loop(e5de)
-			integration_loop(e3de)
+			# attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+			hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
+			et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+str(sp)
+	# 		Erms_math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function="SQRT($0 / ( $1 + .000000000000000000000000000000000000000000000000001 ))",Dimensions=extents_str)
+	# 		integration_loop(e5de)
+	# 		integration_loop(e3de)
 
 	############################################################################################################################################################################################
 	# Write document tree to file

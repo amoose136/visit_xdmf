@@ -1,2 +1,4 @@
 chimera_003800000_grid_1_01.h5 filter=lfs diff=lfs merge=lfs -text
 chimera_003800000_grid_1_01_pro.h5 filter=lfs diff=lfs merge=lfs -text
+chimera_003800000_grid_1_aux.h5 filter=lfs diff=lfs merge=lfs -text
+chimera_00400_grid_1_aux.h5 filter=lfs diff=lfs merge=lfs -text
