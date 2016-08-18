@@ -8,7 +8,8 @@ start_time = time.time()
 import sys, os, math, socket, argparse, re
 import subprocess as sp
 import numpy as np
-from pdb import set_trace as br
+from pdb import set_trace as br #I prefer the c style "break" nomenclature to "trace"
+from multiprocessing import pool
 
 #define an error printing function for more accurate error reporting to terminal
 def eprint(*args, **kwargs):
@@ -163,7 +164,7 @@ for filename in args.files:
 		psi0_c=hf['radiation']['psi0_c']
 		E_RMS_array=[]
 		j=0
-		for i in xrange(1,slices+1):
+		for i in range(1,slices+1):
 			j+=1
 			if args.repeat:
 				i=1
@@ -180,21 +181,25 @@ for filename in args.files:
 				denominator = psi0_c[:,:,:,n,0]*e3de[0]
 				for i in xrange(1,n_groups):
 					numerator+=psi0_c[:,:,:,n,i]*e5de[i]
-					denominator+= psi0_c[:,:,:,n,i]*e3de[i]
+					denominator+=psi0_c[:,:,:,n,i]*e3de[i]
 				E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
 		del j, psi0_c
 		
-		for n in xrange(0,n_species):
+		for n in range(0,n_species):
 			if not args.quiet:
 				print("Concatenating E_RMS_"+str(n)+" results...")
-			E_RMS=np.concatenate(E_RMS_array[n])
+			E_RMS=np.stack(E_RMS_array[n],axis=0)
 			if not args.quiet:
 				print("Writing E_RMS_"+str(n)+" out to file")
 			aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
 			del E_RMS
+		psi1_e=hf['radiation']['psi1_e']
+		radius=hf['mesh']['x_ef']
+		br()
+		# for i in range() 
+			# area=4*pi*radius**2
 		aux_hf.close()
 		del aux_hf,E_RMS_array
-
 	
 
 	############################################################################################################################################################################################
