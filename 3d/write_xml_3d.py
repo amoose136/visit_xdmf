@@ -164,42 +164,43 @@ for filename in args.files:
 		#open new auxilary hdf file or overite existing one. 
 		aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
 		aux_hf.create_group("/radiation") #or do nothing if exists
-		#Cumpute E_RMS_array (size N_species) of arrays (size N_groups)
-		# psi0_c=hf['radiation']['psi0_c'] 
-		# E_RMS_array=[]
-		# j=0
-		# for i in range(1,slices+1):
-		# 	j+=1
-		# 	if args.repeat:
-		# 		i=1
-		# 	if not args.quiet:
-		# 		print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
-		# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-		# 	psi0_c=temp_hf['radiation']['psi0_c'][:]
-		# 	# br()
-		# 	for n in range(0,n_species):
-		#		if not args.quiet:
-		# 			print("	Computing E_RMS_"+str(n))
-		# 		E_RMS_array.append([])
-		# 		numerator = psi0_c[:,:,:,n,0]*e5de[0]
-		# 		denominator = psi0_c[:,:,:,n,0]*e3de[0]
-		# 		for i in xrange(1,n_groups):
-		# 			numerator+=psi0_c[:,:,:,n,i]*e5de[i]
-		# 			denominator+=psi0_c[:,:,:,n,i]*e3de[i]
-		# 		E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
-		# del j, psi0_c
+		#Compute E_RMS_array (size N_species) of arrays (size N_groups)
+		psi0_c=hf['radiation']['psi0_c'] 
+		E_RMS_array=[]
+		j=0
+		for i in range(1,slices+1):
+			j+=1
+			if args.repeat:
+				i=1
+			if not args.quiet:
+				print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			psi0_c=temp_hf['radiation']['psi0_c'][:]
+			# br()
+			for n in range(0,n_species):
+				if not args.quiet:
+					print("	Computing E_RMS_"+str(n))
+				E_RMS_array.append([])
+				numerator = psi0_c[:,:,:,n,0]*e5de[0]
+				denominator = psi0_c[:,:,:,n,0]*e3de[0]
+				for i in xrange(1,n_groups):
+					numerator+=psi0_c[:,:,:,n,i]*e5de[i]
+					denominator+=psi0_c[:,:,:,n,i]*e3de[i]
+				E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
+		del j, psi0_c
 		
-		# #concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-		# for n in range(0,n_species):
-		# 	if not args.quiet:
-		# 		print("Concatenating E_RMS_"+str(n)+" results...")
-		# 	E_RMS=np.stack(E_RMS_array[n],axis=0)
-		# 	if not args.quiet:
-		# 		print("Writing E_RMS_"+str(n)+" out to file")
-		# 	aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
-		# 	del E_RMS
-		# del E_RMS_array
-		br()
+		#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+		for n in range(0,n_species):
+			if not args.quiet:
+				print("Concatenating E_RMS_"+str(n)+" results...")
+			E_RMS=np.stack(E_RMS_array[n],axis=0)
+			if not args.quiet:
+				print("Writing E_RMS_"+str(n)+" out to file")
+			aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
+			del E_RMS
+		del E_RMS_array
+		
+		######## luminosity part ###########
 		if not args.quiet:
 			print("Computing luminosities")
 		psi1_e=hf['radiation']['psi1_e']
