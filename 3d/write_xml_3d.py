@@ -18,10 +18,11 @@ def eprint(*args, **kwargs):
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
-from joblib import Parallel, delayed
 # For my laptop
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
+
+from joblib import Parallel, delayed
 # try:
 # 	import visit
 # 	import visit_utils
