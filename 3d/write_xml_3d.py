@@ -10,7 +10,7 @@ import subprocess as sp
 import numpy as np
 from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
 from multiprocessing import pool,cpu_count #For parallel speedup in derivative values 
-from joblib import Parallel, delayed
+
 #define an error printing function for more accurate error reporting to terminal
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -18,6 +18,7 @@ def eprint(*args, **kwargs):
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
+from joblib import Parallel, delayed
 # For my laptop
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
