@@ -8,9 +8,9 @@ start_time = time.time()
 import sys, os, math, socket, argparse, re
 import subprocess as sp
 import numpy as np
-from pdb import set_trace as br #I prefer the c style "break" nomenclature to "trace"
-from multiprocessing import pool
-
+from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
+from multiprocessing import pool,cpu_count #For parallel speedup in derivative values 
+from joblib import Parallel, delayed
 #define an error printing function for more accurate error reporting to terminal
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
@@ -159,47 +159,70 @@ for filename in args.files:
 		h = 4.13567e-21
 		ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
 
+		#open new auxilary hdf file or overite existing one. 
 		aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
-		aux_hf.create_group("/radiation")
-		psi0_c=hf['radiation']['psi0_c']
-		E_RMS_array=[]
-		j=0
-		for i in range(1,slices+1):
-			j+=1
-			if args.repeat:
-				i=1
-			if not args.quiet:
-				print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
-			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-			psi0_c=temp_hf['radiation']['psi0_c'][:]
-			# br()
-			for n in range(0,n_species):
-				if not args.quiet:
-					print("	Computing E_RMS_"+str(n))
-				E_RMS_array.append([])
-				numerator = psi0_c[:,:,:,n,0]*e5de[0]
-				denominator = psi0_c[:,:,:,n,0]*e3de[0]
-				for i in xrange(1,n_groups):
-					numerator+=psi0_c[:,:,:,n,i]*e5de[i]
-					denominator+=psi0_c[:,:,:,n,i]*e3de[i]
-				E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
-		del j, psi0_c
+		aux_hf.create_group("/radiation") #or do nothing if exists
+		#Cumpute E_RMS_array (size N_species) of arrays (size N_groups)
+		# psi0_c=hf['radiation']['psi0_c'] 
+		# E_RMS_array=[]
+		# j=0
+		# for i in range(1,slices+1):
+		# 	j+=1
+		# 	if args.repeat:
+		# 		i=1
+		# 	if not args.quiet:
+		# 		print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
+		# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+		# 	psi0_c=temp_hf['radiation']['psi0_c'][:]
+		# 	# br()
+		# 	for n in range(0,n_species):
+		#		if not args.quiet:
+		# 			print("	Computing E_RMS_"+str(n))
+		# 		E_RMS_array.append([])
+		# 		numerator = psi0_c[:,:,:,n,0]*e5de[0]
+		# 		denominator = psi0_c[:,:,:,n,0]*e3de[0]
+		# 		for i in xrange(1,n_groups):
+		# 			numerator+=psi0_c[:,:,:,n,i]*e5de[i]
+		# 			denominator+=psi0_c[:,:,:,n,i]*e3de[i]
+		# 		E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
+		# del j, psi0_c
 		
-		for n in range(0,n_species):
-			if not args.quiet:
-				print("Concatenating E_RMS_"+str(n)+" results...")
-			E_RMS=np.stack(E_RMS_array[n],axis=0)
-			if not args.quiet:
-				print("Writing E_RMS_"+str(n)+" out to file")
-			aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
-			del E_RMS
-		psi1_e=hf['radiation']['psi1_e']
-		radius=hf['mesh']['x_ef']
+		# #concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+		# for n in range(0,n_species):
+		# 	if not args.quiet:
+		# 		print("Concatenating E_RMS_"+str(n)+" results...")
+		# 	E_RMS=np.stack(E_RMS_array[n],axis=0)
+		# 	if not args.quiet:
+		# 		print("Writing E_RMS_"+str(n)+" out to file")
+		# 	aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
+		# 	del E_RMS
+		# del E_RMS_array
 		br()
-		# for i in range() 
-			# area=4*pi*radius**2
+		if not args.quiet:
+			print("Computing luminosities")
+		psi1_e=hf['radiation']['psi1_e']
+		radius=hf['mesh']['x_ef'].value
+		agr_e=hf['fluid']['agr_e'].value
+		cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+		lumin=np.empty((dims[2],dims[1],dims[0]))
+		lumin_array=[]
+		for species in range(0,n_species):
+			if not args.quiet:
+				print("Computing luminosity for species: "+str(species))
+			for sl in range(0,n_hyperslabs):
+				if not args.quiet:
+					print("	On slice "+str(sl+1)+" of "+str(n_hyperslabs))
+				lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:543],(dims[2]/n_hyperslabs,180,1))
+			lumin_array.append(lumin)
+		del lumin
+		if not args.quiet:
+			print("########################################")
+		for n,lumin in enumerate(lumin_array):
+			if not args.quiet:
+				print("Writing luminosity species "+str(n)+" to auxilary hdf file")
+			aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
 		aux_hf.close()
-		del aux_hf,E_RMS_array
+		del aux_hf, lumin_array
 	
 
 	############################################################################################################################################################################################
@@ -382,6 +405,10 @@ for filename in args.files:
 			hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+str(sp)
+			attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+			hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
+			et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+str(sp)
 	# 		Erms_math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function="SQRT($0 / ( $1 + .000000000000000000000000000000000000000000000000001 ))",Dimensions=extents_str)
 	# 		integration_loop(e5de)
 	# 		integration_loop(e3de)

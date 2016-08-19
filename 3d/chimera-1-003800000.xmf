@@ -1225,10 +1225,22 @@
           <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_0</DataItem>
         </DataItem>
       </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="Luminosity_0">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_0</DataItem>
+        </DataItem>
+      </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_1">
         <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
           <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
           <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_1</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="Luminosity_1">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_1</DataItem>
         </DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_2">
@@ -1237,10 +1249,22 @@
           <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_2</DataItem>
         </DataItem>
       </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="Luminosity_2">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_2</DataItem>
+        </DataItem>
+      </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="E_RMS_3">
         <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
           <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
           <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_3</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 180 540" Name="Luminosity_3">
+        <DataItem Dimensions="180 180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 180 180 540</DataItem>
+          <DataItem Dimensions="180 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_3</DataItem>
         </DataItem>
       </Attribute>
     </Grid>
