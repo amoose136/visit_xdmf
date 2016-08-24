@@ -11,11 +11,13 @@ import numpy as np
 from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
 import multiprocessing as mp #For parallel speedup in derivative values 
 
-#define an error printing function for more accurate error reporting to terminal
+#define an error printing function for error reporting to terminal STD error IO stream
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+#define a standard printing function that only functions if there is no silence flag on script invocation
 def qprint(*args,**kwargs):
-	print(*args,**kwargs)
+	if not args.quiet:
+		print(*args,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -427,6 +429,7 @@ for filename in args.files:
 			file_out_name=filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
 		else:
 			file_out_name=filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		br()
 		f=open(file_out_name,'w')
 		del extension
 		# if lxml module loaded use it to write document (fasted, simplest implementation):
