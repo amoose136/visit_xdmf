@@ -9,11 +9,13 @@ import sys, os, math, socket, argparse, re
 import subprocess as sp
 import numpy as np
 from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
-from multiprocessing import pool,cpu_count #For parallel speedup in derivative values 
+import multiprocessing as mp #For parallel speedup in derivative values 
 
 #define an error printing function for more accurate error reporting to terminal
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
+def qprint(*args,**kwargs):
+	print(*args,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -58,8 +60,7 @@ try:
 # Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
 except ImportError:
 	try:
-		if not args.quiet:
-			print("Trying to run under reloaded modules")
+		qprint("Trying to run under reloaded modules")
 		try:
 			if not args.norepeat:
 				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
@@ -71,41 +72,35 @@ except ImportError:
 			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
 			eprint("Could not import modules")
 			raise ValueError('aw crap')
-		if not args.quiet:
-			print("Finished")
+		qprint("Finished")
 	except:
 		eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
 	sys.exit()
 #Robustly import an xml writer/parser
 try:
 	from lxml import etree as et
-	if not args.quiet:
-		print("Running with lxml.etree")
+	qprint("Running with lxml.etree")
 except ImportError:
 	try:
 		# Python 2.5
 		import xml.etree.cElementTree as et
 		import xml.dom.minidom as md
-		if not args.quiet:
-			print("Running with cElementTree on Python 2.5+")
+		qprint("Running with cElementTree on Python 2.5+")
 	except ImportError:
 		try:
 		# Python 2.5
 			import xml.etree.ElementTree as et
-			if not args.quiet:
-				print("Running with ElementTree on Python 2.5+")
+			qprint("Running with ElementTree on Python 2.5+")
 		except ImportError:
 			try:
 				# normal cElementTree install
 				import cElementTree as et
-				if not args.quiet:
-					print("running with cElementTree")
+				qprint("running with cElementTree")
 			except ImportError:
 				try:
 					# normal ElementTree install
 					import elementtree.ElementTree as et
-					if not args.quiet:
-						print("running with ElementTree")
+					qprint("running with ElementTree")
 				except ImportError:
 					eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
 ############################################################################################################################################################################################
@@ -121,7 +116,7 @@ for filename in args.files:
 	extents.append(hf['mesh']['theta_index_bound'][1])
 	extents.append(hf['mesh']['phi_index_bound'][1])
 	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
-	
+	n_elemental_species = hf['abundance']['xn_c'].shape[3]
 	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 	processed_suffix='_pro'
 	if filename[-7:-3]!='_pro':
@@ -143,8 +138,7 @@ for filename in args.files:
 	############################################################################################################################################################################################
 	# compute luminosity auxilary variabes
 	if args.aux:
-		if not args.quiet:
-			print("Creating derived values")
+		qprint("Creating derived values")
 		n_groups=hf['radiation']['raddim'][0]
 		n_species=hf['radiation']['raddim'][1]
 		energy_edge=hf['radiation']['unubi'].value
@@ -166,40 +160,44 @@ for filename in args.files:
 		aux_hf.create_group("/radiation") #or do nothing if exists
 
 		######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
+		# initialize variables for parallel loop
 		psi0_c=hf['radiation']['psi0_c'] 
-		E_RMS_array=[]
-		j=0
-		for i in range(1,slices+1):
-			j+=1
+		
+		E_RMS_array=np.empty((slices,n_species,dims[2],dims[1],dims[0]))
+		ji=0
+		# for i in range(1,slices+1):
+		def compute_E_RMS_array(n_species,filename,ji,E_RMS_array):	
+			ji+=1
+			i=ji
 			if args.repeat:
 				i=1
-			if not args.quiet:
-				print("Slice "+str(j)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
+			qprint("Slice "+str(ji)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename))+':')
 			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
 			psi0_c=temp_hf['radiation']['psi0_c'][:]
-			# br()
 			for n in range(0,n_species):
-				if not args.quiet:
-					print("	Computing E_RMS_"+str(n))
-				E_RMS_array.append([])
+				qprint("	Computing E_RMS_"+str(n)+" - slice "+str(ji))
 				numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
 				denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-				E_RMS_array[n].append(np.sqrt(numerator/(denominator+1e-100)))
+				br()
+				print(E_RMS_array[ji,n,:,:,:].shape())
+				print(np.sqrt(numerator/(denominator+1e-100)).shape())
+		num_cores=min(16,mp.cpu_count())
+		
+		br()
+		compute_E_RMS_array(n_species,filename,ji,E_RMS_array)
+		
 		del j, psi0_c
 		#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 		for n in range(0,n_species):
-			if not args.quiet:
-				print("Concatenating E_RMS_"+str(n)+" results...")
+			qprint("Concatenating E_RMS_"+str(n)+" results...")
 			E_RMS=np.stack(E_RMS_array[n],axis=0)
-			if not args.quiet:
-				print("Writing E_RMS_"+str(n)+" out to file")
+			qprint("Writing E_RMS_"+str(n)+" out to file")
 			aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS)
 			del E_RMS
 		del E_RMS_array
 		
 		######## luminosity part ###########
-		if not args.quiet:
-			print("Computing luminosities")
+		qprint("Computing luminosities")
 		psi1_e=hf['radiation']['psi1_e']
 		radius=hf['mesh']['x_ef'].value
 		agr_e=hf['fluid']['agr_e'].value
@@ -207,8 +205,7 @@ for filename in args.files:
 		lumin=np.empty((dims[2],dims[1],dims[0]))
 		lumin_array=[]
 		for species in range(0,n_species):
-			if not args.quiet:
-				print("Computing luminosity for species "+str(species)+":")
+			qprint("Computing luminosity for species "+str(species)+":")
 			j=0
 			for sl in range(0,n_hyperslabs):
 				j+=1
@@ -216,16 +213,13 @@ for filename in args.files:
 					sl=0
 				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
 				psi1_e=temp_hf['radiation']['psi1_e']
-				if not args.quiet:
-					print("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+				qprint("	On slice "+str(j)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
 				lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
 			lumin_array.append(lumin)
 		del lumin,j
-		if not args.quiet:
-			print("########################################")
+		qprint("########################################")
 		for n,lumin in enumerate(lumin_array):
-			if not args.quiet:
-				print("Writing luminosity species "+str(n)+" to auxilary hdf file")
+			qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
 			aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
 		aux_hf.close()
 		del aux_hf, lumin_array
@@ -343,9 +337,9 @@ for filename in args.files:
 					dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 					et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 					if args.repeat==True:
-						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
 					else:
-						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" 17",NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
+						et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
 					n+=1
 	############################################################################################################################################################################################
 	##Compute Luminosity variable using dumb hyperslabs
@@ -461,8 +455,7 @@ for filename in args.files:
 			import xml.etree.cElementTree as et
 			import xml.dom.minidom as md
 			f=open(file_out_name,'w')
-			if not args.quiet:
-				print("Writing "+file_out_name+" with improvised \"pretty print\"")
+			qprint("Writing "+file_out_name+" with improvised \"pretty print\"")
 			def prettify(elem):
 				rough_string = et.tostring(elem, 'ASCII')
 				reparsed = md.parseString(rough_string)
@@ -475,8 +468,7 @@ for filename in args.files:
 			f=open(file_out_name,'a')
 			f.write(prettify(xdmf))
 		f.close()
-		if not args.quiet:
-			print("--- "+file_out_name+" created in %s seconds ---" % (time.time()-old_time))
+		qprint("--- "+file_out_name+" created in %s seconds ---" % (time.time()-old_time))
 		old_time=time.time()
 	except:
 		eprint("Fatal error:")
