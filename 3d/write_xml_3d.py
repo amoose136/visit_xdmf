@@ -15,9 +15,9 @@ import multiprocessing as mp #For parallel speedup in derivative values
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 #define a standard printing function that only functions if there is no silence flag on script invocation
-def qprint(*args,**kwargs):
+def qprint(*arg,**kwargs):
 	if not args.quiet:
-		print(*args,**kwargs)
+		print(*arg,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -51,6 +51,7 @@ parser.add_argument('--short','-s',dest='shortfilename',action='store_const',con
 parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiation components')
 parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
+parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
 args=parser.parse_args()
 #End Parser construction
@@ -63,17 +64,16 @@ try:
 except ImportError:
 	try:
 		qprint("Trying to run under reloaded modules")
-		try:
-			if not args.norepeat:
-				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py;python "+(' '.join(sys.argv))+" --norepeat"],shell=True)
-			else:
-				raise ValueError('aw crap, already reloaded and still failed to import something')
-		except:
+		# try:
+		if not args.norepeat:
+			sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+		else:
+			raise ValueError('aw crap, already reloaded and still failed to import something')
+		# except:
 			#redo the offending call so the error can display
-			sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-			eprint("Could not import modules")
-			raise ValueError('aw crap')
+			# sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+			# eprint("Could not import modules")
+			# raise ValueError('aw crap')
 		qprint("Finished")
 	except:
 		eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
@@ -185,7 +185,6 @@ for filename in args.files:
 				print(np.sqrt(numerator/(denominator+1e-100)).shape())
 		num_cores=min(16,mp.cpu_count())
 		
-		br()
 		compute_E_RMS_array(n_species,filename,ji,E_RMS_array)
 		
 		del j, psi0_c
@@ -419,19 +418,24 @@ for filename in args.files:
 	# Write document tree to file
 	try:
 		# explode filename into list
-		filename_part=filename.rsplit('_')
+		file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		filename_part = re.search('(?<=\/)(?!.+\/).*',filename).group().rsplit('_')
 		if args.prefix:
 			filename_part[0]=args.prefix
+		if args.dir:
+			file_directory = str(args.dir)
+			qprint("Directory set to "+file_directory)
+		if not file_directory.endswith('/'):
+			file_directory+='/'
 		extension='.xmf'
 		if args.xdmf:
 			extension='.xdmf'
 		if args.shortfilename:
-			file_out_name=filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
 		else:
-			file_out_name=filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
-		br()
+			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
 		f=open(file_out_name,'w')
-		del extension
+		del extension,file_directory
 		# if lxml module loaded use it to write document (fasted, simplest implementation):
 		entities={
 		"h5path":filename[:-5]
