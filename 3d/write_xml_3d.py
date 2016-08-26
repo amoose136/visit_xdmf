@@ -334,7 +334,7 @@ for filename in args.files:
 			n=1
 			for m in range(0, int((slices-1)/10)+1):
 				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
-				for i in range(0,(slices-m*10)):
+				for i in range(0,min(slices-m*10,10)):
 					dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 					et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
 					if args.repeat==True:
