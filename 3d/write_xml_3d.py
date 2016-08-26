@@ -15,9 +15,9 @@ import multiprocessing as mp #For parallel speedup in derivative values
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
 #define a standard printing function that only functions if there is no silence flag on script invocation
-def qprint(*args,**kwargs):
+def qprint(*arg,**kwargs):
 	if not args.quiet:
-		print(*args,**kwargs)
+		print(*arg,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
