@@ -22,6 +22,8 @@ def qprint(*arg,**kwargs):
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
+if socket.gethostname()[:5]=='titan':
+	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 # For my laptop
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
@@ -66,7 +68,10 @@ except ImportError:
 		qprint("Trying to run under reloaded modules")
 		# try:
 		if not args.norepeat:
-			sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+			if socket.gethostname()[:4]=='rhea':
+				sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+			if socket.gethostname()[:5]=='titan':
+				sp.call(['bash -cl "cd '+os.getcwd()+'; module load python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 		else:
 			raise ValueError('aw crap, already reloaded and still failed to import something')
 		# except:
@@ -119,6 +124,7 @@ for filename in args.files:
 	extents.append(hf['mesh']['phi_index_bound'][1])
 	n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 	n_elemental_species = hf['abundance']['xn_c'].shape[3]
+
 	# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 	processed_suffix='_pro'
 	if filename[-7:-3]!='_pro':
@@ -160,7 +166,7 @@ for filename in args.files:
 		#open new auxilary hdf file or overite existing one. 
 		aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
 		aux_hf.create_group("/radiation") #or do nothing if exists
-
+		aux_hf.create_group("/mesh") #or do nothing if exists
 		######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 		# initialize variables for parallel loop
 		psi0_c=hf['radiation']['psi0_c'] 
@@ -184,9 +190,7 @@ for filename in args.files:
 				print(E_RMS_array[ji,n,:,:,:].shape())
 				print(np.sqrt(numerator/(denominator+1e-100)).shape())
 		num_cores=min(16,mp.cpu_count())
-		
 		compute_E_RMS_array(n_species,filename,ji,E_RMS_array)
-		
 		del j, psi0_c
 		#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 		for n in range(0,n_species):
@@ -222,13 +226,15 @@ for filename in args.files:
 		for n,lumin in enumerate(lumin_array):
 			qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
 			aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+		# now stack mask for YY grid:
+		mask_slice = hf['mesh']['ongrid_mask'].value
+		mask = np.dstack( mask_slice for i in range(0,extents[0]))
+		del mask_slice
+		aux_hf.create_dataset("/mesh/mask",data=mask)
+		
 		aux_hf.close()
-		del aux_hf, lumin_array
-	
-
+		del aux_hf,lumin_array,lumin,mask
 	############################################################################################################################################################################################
-	
-
 	extents[2]=extents[2]/n_hyperslabs*slices
 	dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
 	extents_sub = str(dims[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
@@ -418,6 +424,7 @@ for filename in args.files:
 	# Write document tree to file
 	try:
 		# explode filename into list
+		br()
 		file_directory = re.search('.*\/(?!.+\/)',filename).group()
 		filename_part = re.search('(?<=\/)(?!.+\/).*',filename).group().rsplit('_')
 		if args.prefix:
