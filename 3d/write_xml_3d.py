@@ -249,7 +249,8 @@ for filename in args.files:
 	#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
 	grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
 			'Abundance':et.SubElement(domain,"Grid",Name="Abundance"),
-			'Radiation':et.SubElement(domain,"Grid",Name="Radiation")}
+			'Radiation':et.SubElement(domain,"Grid",Name="Radiation"),
+			'Mesh':et.SubElement(domain,"Grid",Name="Mesh")}
 	et.SubElement(grid['Hydro'],"Topology",TopologyType="3DRectMesh",NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 	geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVYVZ")
 	coords=["x_ef","y_ef","z_ef"]
@@ -263,10 +264,11 @@ for filename in args.files:
 		et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
 		
 	et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
-	et.SubElement(grid['Abundance'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-	et.SubElement(grid['Abundance'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
-	et.SubElement(grid['Radiation'],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-	et.SubElement(grid['Radiation'],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")	
+	for name in grid:
+		if name!='Hydro':
+			et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+			et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
+
 	############################################################################################################################################################################################
 	# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
 	m=dims[:]
@@ -287,6 +289,8 @@ for filename in args.files:
 		return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 	############################################################################################################################################################################################
 	# Loop through all standard scalars in "Hydro" grid
+	at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+	et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;_aux.h5:/mesh/mask"
 	if not args.disable or "hydro" not in args.disable:
 		# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
 		storage_names = { 
@@ -305,7 +309,7 @@ for filename in args.files:
 			"Nuclear_Heating_rate":"dudt_nuc",
 			"Pressure":"press",
 			"Temperature":"t_c",
-			# "mean_A":"",#computed quantity to be added later
+			# "mask":"",#computed quantity to be added later
 			"nse_flag":"e_int",
 		}
 		for name in storage_names:
@@ -424,15 +428,16 @@ for filename in args.files:
 	# Write document tree to file
 	try:
 		# explode filename into list
-		br()
-		file_directory = re.search('.*\/(?!.+\/)',filename).group()
-		filename_part = re.search('(?<=\/)(?!.+\/).*',filename).group().rsplit('_')
+		file_directory=''
+		if re.search('.*\/(?!.+\/)',filename):
+			file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
 		if args.prefix:
 			filename_part[0]=args.prefix
 		if args.dir:
 			file_directory = str(args.dir)
 			qprint("Directory set to "+file_directory)
-		if not file_directory.endswith('/'):
+		if not file_directory.endswith('/') and file_directory != '':
 			file_directory+='/'
 		extension='.xmf'
 		if args.xdmf:
