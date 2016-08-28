@@ -213,35 +213,38 @@ if __name__ == '__main__':
 				aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
 			del E_RMS_array
 			
-			# ######## luminosity part ###########
-			# qprint("Computing luminosities")
-			# psi1_e=hf['radiation']['psi1_e']
-			# radius=hf['mesh']['x_ef'].value
-			# agr_e=hf['fluid']['agr_e'].value
-			# cell_area_GRcorrected=4*pi*radius**2/agr_e**4
-			# lumin=np.empty((dims[2],dims[1],dims[0]))
-			# lumin_array=[]
-			# for species in range(0,n_species):
-			# 	qprint("Computing luminosity for species "+str(species)+":")
-			# 	j=0
-			# 	for sl in range(0,n_hyperslabs):
-			# 		j+=1
-			# 		if args.repeat:
-			# 			sl=0
-			# 		temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
-			# 		psi1_e=temp_hf['radiation']['psi1_e']
-			# 		qprint("	On slice "+str(j)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
-			# 		lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
-			# 	lumin_array.append(lumin)
-			# del lumin,j
-			# qprint("########################################")
-			# for n,lumin in enumerate(lumin_array):
-			# 	qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-			# 	aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+			######## luminosity part ###########
+			qprint("Computing luminosities")
+			psi1_e=hf['radiation']['psi1_e']
+			radius=hf['mesh']['x_ef'].value
+			agr_e=hf['fluid']['agr_e'].value
+			cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+			lumin=np.empty((dims[2],dims[1],dims[0]))
+			lumin_array=[]
+			for species in range(0,n_species):
+				qprint("Computing luminosity for species "+str(species)+":")
+				j=0
+				for sl in range(0,n_hyperslabs):
+					j+=1
+					if args.repeat:
+						sl=0
+					temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+					psi1_e=temp_hf['radiation']['psi1_e']
+					qprint("	On slice "+str(j)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+					lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
+				lumin_array.append(lumin)
+			del lumin,j
+			qprint("########################################")
+			for n,lumin in enumerate(lumin_array):
+				qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+				aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
 			# now stack mask for YY grid:
+			qprint("########################################")
+			qprint("Creating On_grid_mask")
 			mask_slice = hf['mesh']['ongrid_mask'].value
 			mask = np.dstack( mask_slice for i in range(0,extents[0]))
 			del mask_slice
+			qprint("Writing On_grid_mask to auxillary file")
 			aux_hf.create_dataset("/mesh/mask",data=mask)
 			
 			aux_hf.close()
