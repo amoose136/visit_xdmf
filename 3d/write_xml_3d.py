@@ -73,7 +73,7 @@ if __name__ == '__main__':
 					if socket.gethostname()[:4]=='rhea':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 					if socket.gethostname()[:5]=='titan':
-						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 				else:
 					raise ValueError('aw crap, already reloaded and still failed to import something')
 			except:
