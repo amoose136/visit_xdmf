@@ -67,19 +67,19 @@ if __name__ == '__main__':
 	except ImportError:
 		try:
 			qprint("Trying to run under reloaded modules")
-			# try:
-			if not args.norepeat:
-				if socket.gethostname()[:4]=='rhea':
-					sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
-				if socket.gethostname()[:5]=='titan':
-					sp.call(['bash -cl "cd '+os.getcwd()+'; module load python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
-			else:
-				raise ValueError('aw crap, already reloaded and still failed to import something')
-			# except:
+			try:
+				if not args.norepeat:
+					if socket.gethostname()[:4]=='rhea':
+						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+					if socket.gethostname()[:5]=='titan':
+						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+				else:
+					raise ValueError('aw crap, already reloaded and still failed to import something')
+			except:
 				#redo the offending call so the error can display
-				# sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-				# eprint("Could not import modules")
-				# raise ValueError('aw crap')
+				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+				eprint("Could not import modules")
+				raise ValueError('aw crap')
 			qprint("Finished")
 		except:
 			eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
@@ -174,21 +174,6 @@ if __name__ == '__main__':
 			
 			E_RMS_array=np.empty((slices,n_species,dims[2],dims[1],dims[0]))
 			ji=0
-			# for i in range(1,slices+1):
-			# def compute_E_RMS_array(n_species,filename,sl):	
-			# 	sl+=1
-			# 	i=sl
-			# 	if args.repeat:
-			# 		i=1
-			# 	qprint("Computing E_RMS_[1.."+str(n_species)+"] from slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-			# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-			# 	psi0_c=temp_hf['radiation']['psi0_c'][:]
-			# 	row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
-			# 	for n in range(0,n_species):
-			# 		numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-			# 		denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-			# 		row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
-			# 	return row
 			num_cores=min(16,mp.cpu_count())
 			def compute_E_RMS_array(sl):	
 				sl+=1
@@ -213,31 +198,31 @@ if __name__ == '__main__':
 				aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
 			del E_RMS_array
 			
-			######## luminosity part ###########
-			qprint("Computing luminosities")
-			psi1_e=hf['radiation']['psi1_e']
-			radius=hf['mesh']['x_ef'].value
-			agr_e=hf['fluid']['agr_e'].value
-			cell_area_GRcorrected=4*pi*radius**2/agr_e**4
-			lumin=np.empty((dims[2],dims[1],dims[0]))
-			lumin_array=[]
-			for species in range(0,n_species):
-				qprint("Computing luminosity for species "+str(species)+":")
-				j=0
-				for sl in range(0,n_hyperslabs):
-					j+=1
-					if args.repeat:
-						sl=0
-					temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
-					psi1_e=temp_hf['radiation']['psi1_e']
-					qprint("	On slice "+str(j)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
-					lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
-				lumin_array.append(lumin)
-			del lumin,j
-			qprint("########################################")
-			for n,lumin in enumerate(lumin_array):
-				qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-				aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+			# ######## luminosity part ###########
+			# qprint("Computing luminosities")
+			# psi1_e=hf['radiation']['psi1_e']
+			# radius=hf['mesh']['x_ef'].value
+			# agr_e=hf['fluid']['agr_e'].value
+			# cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+			# lumin=np.empty((dims[2],dims[1],dims[0]))
+			# lumin_array=[]
+			# for species in range(0,n_species):
+			# 	qprint("Computing luminosity for species "+str(species)+":")
+			# 	j=0
+			# 	for sl in range(0,n_hyperslabs):
+			# 		j+=1
+			# 		if args.repeat:
+			# 			sl=0
+			# 		temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+			# 		psi1_e=temp_hf['radiation']['psi1_e']
+			# 		qprint("	On slice "+str(j)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+			# 		lumin[sl*6:(sl+1)*6] = np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
+			# 	lumin_array.append(lumin)
+			# del lumin,j
+			# qprint("########################################")
+			# for n,lumin in enumerate(lumin_array):
+			# 	qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+			# 	aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
 			# now stack mask for YY grid:
 			qprint("########################################")
 			qprint("Creating On_grid_mask")
