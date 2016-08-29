@@ -1,7 +1,7 @@
 #!/usr/bin/python
 from __future__ import print_function
 # For diagnostics, time the execution of the code
-import time, six
+import time
 start_time = time.time()
 # Import all the things robustly
 ############################################################################################################################################################################################
@@ -29,6 +29,7 @@ elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
 
 from joblib import Parallel, delayed
+import six
 if __name__ == '__main__':
 	# try:
 	# 	import visit
