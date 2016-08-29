@@ -329,8 +329,11 @@ if __name__ == '__main__':
 						n+=1
 		############################################################################################################################################################################################
 		# Now loop through all the abundance elements and generate hyperslabs
+		species_names=hf['abundance']['a_name'].value
+		if n_elemental_species-1==species_names.shape[0]:
+			species_names=np.append(species_names,'aux')
 		if not args.disable or "abundance" not in args.disable:
-			for el,name in enumerate(hf['abundance']['a_name']):
+			for el,name in enumerate(species_names):
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=re.sub('\D','',name) #find the transition between elements name and number
@@ -356,74 +359,18 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		##Compute Luminosity variable using dumb hyperslabs
 		if not args.disable or "radiation" not in args.disable:
-		# Define read-in for psi0_c once that will later be referenced in hyperslabs
-		# 	outer_join_fun = et.SubElement(grid['Radiation'],"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string+" "+str(n_species)+" "+str(n_groups),Name="psi0_c")
-		# 	n=1
-		# 	for m in range(0, int((slices-1)/10)+1):
-		# 		inner_join_fun = et.SubElement(outer_join_fun,\
-		# 			"DataItem",\
-		# 			ItemType="Function",\
-		# 			Function=function_str(min([(slices-m*10),10])),\
-		# 			Dimensions=dim_str(m)+" "+str(n_species)+" "+str(n_groups)\
-		# 			)
-		# 		for i in range(0,min(slices-m*10,10)):
-		# 			if args.repeat:
-		# 				et.SubElement(inner_join_fun,\
-		# 					"DataItem",\
-		# 					Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-		# 					NumberType="Float",\
-		# 					Precision="8",\
-		# 					Format="HDF"\
-		# 					).text= "&h5path;01" + processed_suffix + ".h5:/radiation/psi0_c"
-		# 			else:
-		# 				et.SubElement(inner_join_fun,\
-		# 					"DataItem",\
-		# 					Dimensions=dimstr_sub+" "+str(n_species)+" "+str(n_groups),\
-		# 					NumberType="Float",\
-		# 					Precision="8",\
-		# 					Format="HDF"\
-		# 					).text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/radiation/psi0_c"
-		# 			n+=1
-		# 	# end definition of psi0_c read-in
-		# 	def integration_loop(integration_measure):
-		# 		outer_sum = et.SubElement(Erms_math_fun,"DataItem",ItemType="Function",Dimensions=extents_str)
-		# 		outer_function_str = ''
-		# 		outer_function_str_array = []
-		# 		for n in range(0, int((n_groups-1)/10)+1):
-		# 			function_stri=''
-		# 			function_str_array=[]
-		# 			outer_function_str_array.append('$'+str(n))
-		# 			inner_sum=et.SubElement(outer_sum, "DataItem",ItemType="Function",Dimensions=extents_str)
-		# 			for i in range(0,min(n_groups-n*10,10)):
-		# 				hyperslab=et.SubElement(inner_sum,"DataItem",ItemType="HyperSlab", Dimensions=extents_str)	
-		# 				function_str_array.append( "$" + str(i) + "*" + str(integration_measure[i+n*10]) )
-		# 				et.SubElement(hyperslab,"DataItem",Dimensions="3 5",Format="XML").text\
-		# 				="0 0 0 "+str(sp)+" "+str(n*10+i)+\
-		# 				" 1 1 1 1 1 "+\
-		# 				extents_str+" 1 1" # eg: 180 180 540 1 1
-		# 				et.SubElement(hyperslab,"DataItem",Reference="/*//DataItem[@Name='psi0_c']")
-		# 			function_stri+=" + ".join(function_str_array)
-		# 			inner_sum.attrib['Function'] = function_stri
-		# 			# inner_sum.attrib['Function'] = "$0"
-
-		# 		outer_function_str+=" + ".join(outer_function_str_array)
-		# 		outer_sum.attrib['Function'] = outer_function_str
-		# 		# outer_sum.attrib['Function'] = "$0"
-	 
 			n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
 			for sp in range(0,n_species):
-				# attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+				# E_RMS_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
 				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+str(sp)
+				# Luminosity_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
 				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+str(sp)
-		# 		Erms_math_fun = et.SubElement(attribute,"DataItem",ItemType="Function",Function="SQRT($0 / ( $1 + .000000000000000000000000000000000000000000000000001 ))",Dimensions=extents_str)
-		# 		integration_loop(e5de)
-		# 		integration_loop(e3de)
 
 		############################################################################################################################################################################################
 		# Write document tree to file
