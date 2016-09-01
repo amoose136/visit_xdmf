@@ -17,7 +17,7 @@ def eprint(*args, **kwargs):
 #define a standard printing function that only functions if there is no silence flag on script invocation
 def qprint(*arg,**kwargs):
 	if not args.quiet:
-		print(*arg,**kwargs
+		print(*arg,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -386,7 +386,7 @@ if __name__ == '__main__':
 						if 'fun' in globals():
 							return_element=fun
 						dataElement = et.SubElement(return_element,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
-						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]+" 1"
+						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+[extents_sub,'1 '+extents_str][is_2d]+" 1"
 						if args.repeat==True:
 							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
 						else:
