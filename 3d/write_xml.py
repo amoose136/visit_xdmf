@@ -354,9 +354,9 @@ if __name__ == '__main__':
 						if 'fun' in globals():
 							return_element=fun
 						if args.repeat:
-							et.SubElement(return_element,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
 						else:
-							et.SubElement(return_element,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
 						n+=1
 		############################################################################################################################################################################################
 		# Abundance part:
