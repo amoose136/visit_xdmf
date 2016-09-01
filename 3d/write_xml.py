@@ -17,7 +17,7 @@ def eprint(*args, **kwargs):
 #define a standard printing function that only functions if there is no silence flag on script invocation
 def qprint(*arg,**kwargs):
 	if not args.quiet:
-		print(*arg,**kwargs)
+		print(*arg,**kwargs
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -124,8 +124,16 @@ if __name__ == '__main__':
 		extents.append(hf['mesh']['radial_index_bound'][1])
 		extents.append(hf['mesh']['theta_index_bound'][1])
 		extents.append(hf['mesh']['phi_index_bound'][1])
+		topo_type='3DRectMesh'
+		geom_type='VXVYVZ'
+		is_3d=True
+		is_2d=False
 		if extents[2]==1:
 			del extents[2]
+			topo_type='2DRectMesh'
+			geom_type=geom_type[0:4]
+			is_2d=True
+			is_3d=(not is_2d)
 		n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 		n_elemental_species = hf['abundance']['xn_c'].shape[3]
 
@@ -173,33 +181,31 @@ if __name__ == '__main__':
 			aux_hf.create_group("/mesh") #or do nothing if exists
 			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 			# # initialize variables for parallel loop
-			# psi0_c=hf['radiation']['psi0_c'] 
-			
-			# E_RMS_array=np.empty((slices,n_species,dims[2],dims[1],dims[0]))
-			# ji=0
+			psi0_c=hf['radiation']['psi0_c'] 
+			E_RMS_array=np.empty((slices,n_species,dims[2],dims[1],dims[0]))
 			num_cores=min(16,mp.cpu_count())
-			# def compute_E_RMS_array(sl):	
-			# 	sl+=1
-			# 	i=sl
-			# 	if args.repeat:
-			# 		i=1
-			# 	qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-			# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-			# 	psi0_c=temp_hf['radiation']['psi0_c'][:]
-			# 	row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
-			# 	for n in range(0,n_species):
-			# 		numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-			# 		denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-			# 		row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
-			# 	return row
-			# results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
-			# #concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-			# qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-			# E_RMS_array=np.hstack(results)
-			# for n in range(0,n_species):
-			# 	qprint("Writing E_RMS_"+str(n)+" out to file")
-			# 	aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
-			# del E_RMS_array, results
+			def compute_E_RMS_array(sl):	
+				sl+=1
+				i=sl
+				if args.repeat:
+					i=1
+				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				psi0_c=temp_hf['radiation']['psi0_c'][:]
+				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+				for n in range(0,n_species):
+					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
+					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
+					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+				return row
+			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
+			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
+			E_RMS_array=np.hstack(results)
+			for n in range(0,n_species):
+				qprint("Writing E_RMS_"+str(n)+" out to file")
+				aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
+			del E_RMS_array, results
 			
 			# ######## luminosity part ###########
 			qprint("Computing luminosities")
@@ -250,10 +256,9 @@ if __name__ == '__main__':
 			aux_hf.close()
 			# del aux_hf,lumin_array,lumin,mask
 		############################################################################################################################################################################################
-		br()
 		dimstr_sub = str(dims[1])+" "+str(dims[0])
 		extents_sub = str(extents[1])+" "+str(extents[0])
-		if np.shape(extents)[0]==3:
+		if not is_2d:
 			extents[2]=extents[2]/n_hyperslabs*slices
 			dimstr_sub = str(dims[2]/n_hyperslabs)+" "+str(dims[1])+" "+str(dims[0])
 			extents_sub = str(dims[2]/n_hyperslabs)+" "+str(extents[1])+" "+str(extents[0])
@@ -270,9 +275,11 @@ if __name__ == '__main__':
 				'Abundance':et.SubElement(domain,"Grid",Name="Abundance"),
 				'Radiation':et.SubElement(domain,"Grid",Name="Radiation"),
 				'Mesh':et.SubElement(domain,"Grid",Name="Mesh")}
-		et.SubElement(grid['Hydro'],"Topology",TopologyType="3DRectMesh",NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
-		geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType="VXVYVZ")
+		et.SubElement(grid['Hydro'],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
+		geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType=geom_type)
 		coords=["x_ef","y_ef","z_ef"]
+		if is_2d:
+			del coords[2]
 		for n,coord_name in enumerate(coords):
 			parent_element=geometry
 			if coord_name=='x_ef':
@@ -291,7 +298,8 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
 		m=dims[:]
-		m[2]=extents[2]
+		if not is_2d:
+			m[2]=extents[2]
 		block_string=' '.join([str(x) for x in m[::-1]])
 		#block_string is a string that uses extents for the radial component and dims for the others
 		def function_str(m):
@@ -334,19 +342,24 @@ if __name__ == '__main__':
 			for name in storage_names:
 				at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 				hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
-				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
-				superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
+				if is_3d:
+					superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=block_string)
 				n=1
 				for m in range(0, int((slices-1)/10)+1):
-					fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
+					if is_3d:
+						fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=dim_str(m))
 					for i in range(0,min(slices-m*10,10)):
+						return_element=hyperslab
+						if 'fun' in globals():
+							return_element=fun
 						if args.repeat:
-							et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
 						else:
-							et.SubElement(fun,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=dimstr_sub,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
 						n+=1
 		############################################################################################################################################################################################
-		# Now loop through all the abundance elements and generate hyperslabs
+		# Abundance part:
 		species_names=hf['abundance']['a_name'].value
 		if n_elemental_species-1==species_names.shape[0]:
 			species_names=np.append(species_names,'aux')
@@ -362,32 +375,37 @@ if __name__ == '__main__':
 					attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				else:
 					attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
-				superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
+				if is_3d:
+					superfun = et.SubElement(attribute,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=extents_str)
 				n=1
 				for m in range(0, int((slices-1)/10)+1):
-					fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
+					if is_3d:
+						fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m*10),10])),Dimensions=extents_stri(min(slices-m*10,10)))
 					for i in range(0,min(slices-m*10,10)):
-						dataElement = et.SubElement(fun,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
-						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+extents_sub+" 1"
+						return_element=attribute
+						if 'fun' in globals():
+							return_element=fun
+						dataElement = et.SubElement(return_element,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
+						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]+" 1"
 						if args.repeat==True:
-							et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
+							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
 						else:
-							et.SubElement(dataElement,"DataItem",Dimensions=dimstr_sub+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
+							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
 						n+=1
 		############################################################################################################################################################################################
-		##Compute Luminosity variable using dumb hyperslabs
+		##Create luminosity and E_RMS xdmf
 		if not args.disable or "radiation" not in args.disable:
 			n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
 			for sp in range(0,n_species):
 				# E_RMS_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
-				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
 				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+str(sp)
 				# Luminosity_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
-				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+extents_str
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
 				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+str(sp)
 
 		############################################################################################################################################################################################
