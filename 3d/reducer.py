@@ -179,42 +179,35 @@ if __name__ == '__main__':
 		reduced_hf.create_group('/Z')
 		reduced_hf.create_group('/Z/mesh')
 		reduced_hf.create_dataset('/Z/mesh/x_ef',data=hf['mesh']['x_ef'])
-		reduced_hf.create_dataset('/Z/mesh/z_ef',data=hf['mesh']['z_ef'])
+		reduced_hf.create_dataset('/Z/mesh/z_ef',data=hf['mesh']['z_ef'].value)
 		# create corresponding xdmf:
 		xdmf = et.Element("Xdmf", Version="2.0")
 		domain = et.SubElement(xdmf,"Domain")
 		grid = {'X/Hydro':et.SubElement(domain,"Grid",Name="X/Hydro"),
+				'Y/Hydro':et.SubElement(domain,"Grid",Name="Y/Hydro"),
+				'Z/Hydro':et.SubElement(domain,"Grid",Name="Z/Hydro"), #I would have this later but apparently order matters because VisIt
 				'X/Abundance':et.SubElement(domain,"Grid",Name="X/Abundance"),
 				'X/Radiation':et.SubElement(domain,"Grid",Name="X/Radiation"),
-				'X/Mesh':et.SubElement(domain,"Grid",Name="X/Mesh"),
-				'Y/Hydro':et.SubElement(domain,"Grid",Name="Y/Hydro"),
 				'Y/Abundance':et.SubElement(domain,"Grid",Name="Y/Abundance"),
 				'Y/Radiation':et.SubElement(domain,"Grid",Name="Y/Radiation"),
-				'Y/Mesh':et.SubElement(domain,"Grid",Name="Y/Mesh"),
-				'Z/Hydro':et.SubElement(domain,"Grid",Name="Z/Hydro"),
 				'Z/Abundance':et.SubElement(domain,"Grid",Name="Z/Abundance"),
 				'Z/Radiation':et.SubElement(domain,"Grid",Name="Z/Radiation"),
-				'Z/Mesh':et.SubElement(domain,"Grid",Name="Z/Mesh")
 				}
-		# X/Hydro geometry and topology:
-		et.SubElement(grid['X/Hydro'],"Topology",TopologyType=topo_type,NumberOfElements=str(extents[1]*2+1)+' '+str(extents[0]+1))
-		geometry = et.SubElement(grid['X/Hydro'],"Geometry",GeometryType=geom_type)
-		coords=["x_ef","y_ef"]
-		for n,coord_name in enumerate(coords):
-			parent_element=geometry
-			if coord_name=='x_ef':
-				unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
-				parent_element=unit_changing_function
-			hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]*[1,2][coord_name=='y_ef']+1),ItemType="HyperSlab")
-			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]*[1,2][coord_name=='y_ef']+1)
-			et.SubElement(hyperslab,"DataItem",Dimensions=str(dims[n]*[1,2][coord_name=='y_ef']+1),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:X/mesh/" + coord_name
-		et.SubElement(grid['X/Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
-		# For the rest of the X meshes and Y meshes:
-		for name in grid:
-			if name!='X/Hydro' and name[0]!='Z':
-				et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='X/Hydro']/Topology[1]")
-				et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='X/Hydro']/Geometry[1]")
-		# For Z/Hydro mesh:
+		# X/Hydro,Y/Hydro geometry and topology xdmf:
+		for name in ['X/Hydro','Y/Hydro']:
+			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=str(extents[1]*2+1)+' '+str(extents[0]+1))
+			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
+			coords=["x_ef","y_ef"]
+			for n,coord_name in enumerate(coords):
+				parent_element=geometry
+				if coord_name=='x_ef':
+					unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
+					parent_element=unit_changing_function
+				hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]*[1,2][coord_name=='y_ef']+1),ItemType="HyperSlab")
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]*[1,2][coord_name=='y_ef']+1)
+				et.SubElement(hyperslab,"DataItem",Dimensions=str(dims[n]*[1,2][coord_name=='y_ef']+1),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:"+name[0]+"/mesh/" + coord_name
+			et.SubElement(grid[name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+		# For Z/Hydro geometry and topology xdmf:
 		et.SubElement(grid['Z/Hydro'],"Topology",TopologyType=topo_type,NumberOfElements=str(extents[2]+1)+' '+str(extents[0]+1))
 		geometry = et.SubElement(grid['Z/Hydro'],"Geometry",GeometryType=geom_type)
 		coords=["x_ef","z_ef"]
@@ -229,13 +222,15 @@ if __name__ == '__main__':
 			hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
 			et.SubElement(hyperslab,"DataItem",Dimensions=str(dims[n]+1),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Z/mesh/" + coord_name
-		# for rest of Z grids:
+		et.SubElement(grid['Z/Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+		# for rest of grids:
 		for name in grid:
-			if name!='Z/Hydro' and name[0]=='Z':
-				et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='Z/Hydro']/Topology[1]")
-				et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='Z/Hydro']/Geometry[1]")
+			if name[2:]!='Hydro':
+				et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+name[0]+"/Hydro']/Topology[1]")
+				et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+name[0]+"/Hydro']/Geometry[1]")
 		######### Module: Z Slicer ###########
 		# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
+		qprint("Slicing through Z axis")
 		storage_names = { 
 			"Entropy":"entropy",
 			"v_radial":"u_c",
@@ -252,14 +247,13 @@ if __name__ == '__main__':
 			"Nuclear_Heating_rate":"dudt_nuc",
 			"Pressure":"press",
 			"Temperature":"t_c",
-			# "mask":"",#computed quantity to be added later
 			"nse_flag":"e_int",
 		}
 		reduced_hf.create_group('/Z/fluid')
-		extents_str=str(extents[1])+" "+str(extents[0])
-		dims_str=str(dims[1])+" "+str(dims[0])
+		extents_str=str(extents[2])+" "+str(extents[0])
+		dims_str=str(dims[2])+" "+str(dims[0])
 		for name in storage_names:
-			qprint('Writing '+name+' to reduced dataset hdf5 file')
+			qprint('	Writing '+name+' to Z dataset in reduced hdf5 file')
 			scalar_quantity=hf['fluid'][storage_names[name]][:,dims[1]/2,:]
 			for sl in range(2,n_hyperslabs+1):
 				i=sl
@@ -267,14 +261,44 @@ if __name__ == '__main__':
 					i=1
 				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
 				scalar_quantity=np.vstack((scalar_quantity,temp_hf['fluid'][storage_names[name]][:,dims[1]/2,:]))
-			reduced_hf.create_dataset('/Z/fluid/'+storage_names[name],data=scalar_quantity)
+			reduced_hf.create_dataset('Z/fluid/'+storage_names[name],data=scalar_quantity)
 			at = et.SubElement(grid['Z/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Z/fluid/" + storage_names[name]
-
-		reduced_hf.create_group('/Z/abundance')
-		# Write document tree to file
+		######### Module: X Slicer ###########
+		qprint("Slicing through X axis")
+		reduced_hf.create_group('/X/fluid')
+		extents_str=str(extents[1]*2)+" "+str(extents[0])
+		dims_str=str(dims[1]*2)+" "+str(dims[0])
+		i=n_hyperslabs/2
+		if args.repeat:
+			i=1
+		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		for name in storage_names:
+			qprint('	Writing '+name+' to X dataset in reduced hdf5 file')
+			scalar_quantity=np.vstack((hf['fluid'][storage_names[name]][0,:,:],hf2['fluid'][storage_names[name]].value[0,::-1,:]))
+			reduced_hf.create_dataset('X/fluid/'+storage_names[name],data=scalar_quantity)
+			at = et.SubElement(grid['X/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
+			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:X/fluid/" + storage_names[name]
+		######### Module: Y Slicer ###########
+		qprint("Slicing through Y axis")
+		reduced_hf.create_group('/Y/fluid')
+		i=n_hyperslabs*3/2
+		if args.repeat:
+			i=1
+		hf3=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		for name in storage_names:
+			qprint('	Writing '+name+' to Y dataset in reduced hdf5 file')
+			scalar_quantity=np.vstack((hf2['fluid'][storage_names[name]][0,:,:],hf3['fluid'][storage_names[name]].value[0,::-1,:]))
+			reduced_hf.create_dataset('Y/fluid/'+storage_names[name],data=scalar_quantity)
+			at = et.SubElement(grid['Y/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
+			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Y/fluid/" + storage_names[name]
+		######### Module: Xdmf Document writer ###########
 		try:
 			f=open(file_out_name,'w')
 			del extension,file_directory
