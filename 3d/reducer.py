@@ -229,7 +229,6 @@ if __name__ == '__main__':
 				et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+name[0]+"/Hydro']/Topology[1]")
 				et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+name[0]+"/Hydro']/Geometry[1]")
 		######### Module: Z Slicer ###########
-		# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
 		qprint("Slicing through Z axis")
 		storage_names = { 
 			"Entropy":"entropy",
@@ -252,6 +251,7 @@ if __name__ == '__main__':
 		reduced_hf.create_group('/Z/fluid')
 		extents_str=str(extents[2])+" "+str(extents[0])
 		dims_str=str(dims[2])+" "+str(dims[0])
+		br()
 		for name in storage_names:
 			qprint('	Writing '+name+' to Z dataset in reduced hdf5 file')
 			scalar_quantity=hf['fluid'][storage_names[name]][:,dims[1]/2,:]
@@ -266,8 +266,38 @@ if __name__ == '__main__':
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Z/fluid/" + storage_names[name]
+		#	For abundance:
+		S_P='Z/'
+		scalar_quantity=hf['abundance']['xn_c'][:,dims[1]/2,:,:]
+		for sl in range(2,n_hyperslabs+1):
+			i=sl
+			if args.repeat:
+				i=1
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			scalar_quantity=np.vstack((scalar_quantity,temp_hf['abundance']['xn_c'][:,dims[1]/2,:]))
+		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		species_names=hf['abundance']['a_name'].value
+		if n_elemental_species-1==species_names.shape[0]:
+			species_names=np.append(species_names,'aux')
+		if not args.disable or "abundance" not in args.disable:
+			for el,name in enumerate(species_names):
+				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
+					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
+					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
+					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				else:
+					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
+				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				n+=1
 		######### Module: X Slicer ###########
 		qprint("Slicing through X axis")
+		S_P='X/' #S_P stands for Slice Prefix
 		reduced_hf.create_group('/X/fluid')
 		extents_str=str(extents[1]*2)+" "+str(extents[0])
 		dims_str=str(dims[1]*2)+" "+str(dims[0])
@@ -275,6 +305,7 @@ if __name__ == '__main__':
 		if args.repeat:
 			i=1
 		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		#	For hydro:
 		for name in storage_names:
 			qprint('	Writing '+name+' to X dataset in reduced hdf5 file')
 			scalar_quantity=np.vstack((hf['fluid'][storage_names[name]][0,:,:],hf2['fluid'][storage_names[name]].value[0,::-1,:]))
@@ -283,13 +314,43 @@ if __name__ == '__main__':
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:X/fluid/" + storage_names[name]
+		#	For abundance:
+		scalar_quantity=np.vstack((hf['abundance']['xn_c'][0,:,:,:],hf2['abundance']['xn_c'].value[0,::-1,:,:]))
+		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		species_names=hf['abundance']['a_name'].value
+		if n_elemental_species-1==species_names.shape[0]:
+			species_names=np.append(species_names,'aux')
+		if not args.disable or "abundance" not in args.disable:
+			for el,name in enumerate(species_names):
+				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
+					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
+					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
+					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				else:
+					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
+				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				n+=1
+		hf2.close()
 		######### Module: Y Slicer ###########
 		qprint("Slicing through Y axis")
+
+		i=n_hyperslabs/4
+		if args.repeat:
+			i=1
+		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
 		reduced_hf.create_group('/Y/fluid')
-		i=n_hyperslabs*3/2
+		i=n_hyperslabs*3/4
 		if args.repeat:
 			i=1
 		hf3=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		# for Hydro:
+
 		for name in storage_names:
 			qprint('	Writing '+name+' to Y dataset in reduced hdf5 file')
 			scalar_quantity=np.vstack((hf2['fluid'][storage_names[name]][0,:,:],hf3['fluid'][storage_names[name]].value[0,::-1,:]))
@@ -298,6 +359,31 @@ if __name__ == '__main__':
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Y/fluid/" + storage_names[name]
+		#	for Abundance:
+		S_P='Y/'
+		scalar_quantity=np.vstack((hf2['abundance']['xn_c'][0,:,:,:],hf3['abundance']['xn_c'].value[0,::-1,:,:]))
+		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		species_names=hf['abundance']['a_name'].value
+		if n_elemental_species-1==species_names.shape[0]:
+			species_names=np.append(species_names,'aux')
+		if not args.disable or "abundance" not in args.disable:
+			for el,name in enumerate(species_names):
+				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
+					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
+					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
+					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				else:
+					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
+				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				n+=1
+		hf2.close()
+		hf3.close()
 		######### Module: Xdmf Document writer ###########
 		try:
 			f=open(file_out_name,'w')
@@ -348,6 +434,3 @@ if __name__ == '__main__':
 			eprint("Fatal error:")
 			eprint("	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug")
 			sys.exit()
-
-
-
