@@ -40,7 +40,6 @@ if __name__ == '__main__':
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 	# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
-	parser.add_argument('--slices',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
 	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 	parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
@@ -130,12 +129,6 @@ if __name__ == '__main__':
 			break
 		n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 		n_elemental_species = hf['abundance']['xn_c'].shape[3]
-		if args.slices:
-			if not args.slices>slices:
-				slices=args.slices
-			else:
-				eprint("Error: slices must not be more than the number of wedges")
-				sys.exit()
 		# explode filename into list
 		file_directory=''
 		if re.search('.*\/(?!.+\/)',filename):
@@ -232,6 +225,7 @@ if __name__ == '__main__':
 		qprint("Slicing through Z axis")
 		storage_names = { 
 			"Entropy":"entropy",
+			"Density":"rho_c",
 			"v_radial":"u_c",
 			"v_theta":"v_c",
 			"v_phi":"w_c",
@@ -251,7 +245,6 @@ if __name__ == '__main__':
 		reduced_hf.create_group('/Z/fluid')
 		extents_str=str(extents[2])+" "+str(extents[0])
 		dims_str=str(dims[2])+" "+str(dims[0])
-		br()
 		for name in storage_names:
 			qprint('	Writing '+name+' to Z dataset in reduced hdf5 file')
 			scalar_quantity=hf['fluid'][storage_names[name]][:,dims[1]/2,:]
@@ -267,7 +260,7 @@ if __name__ == '__main__':
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Z/fluid/" + storage_names[name]
 		#	For abundance:
-		S_P='Z/'
+		S_P='Z'
 		scalar_quantity=hf['abundance']['xn_c'][:,dims[1]/2,:,:]
 		for sl in range(2,n_hyperslabs+1):
 			i=sl
@@ -275,7 +268,7 @@ if __name__ == '__main__':
 				i=1
 			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
 			scalar_quantity=np.vstack((scalar_quantity,temp_hf['abundance']['xn_c'][:,dims[1]/2,:]))
-		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		reduced_hf.create_dataset(S_P+'/abundance/xn_c',data=scalar_quantity)
 		species_names=hf['abundance']['a_name'].value
 		if n_elemental_species-1==species_names.shape[0]:
 			species_names=np.append(species_names,'aux')
@@ -285,20 +278,20 @@ if __name__ == '__main__':
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
 					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
-						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
-					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+						grid[S_P+'/Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'/Abundance'+'/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				else:
-					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+					attribute=et.SubElement(grid[S_P+'/Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
 				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
-				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"/abundance/xn_c"
 				n+=1
 		######### Module: X Slicer ###########
 		qprint("Slicing through X axis")
-		S_P='X/' #S_P stands for Slice Prefix
-		reduced_hf.create_group('/X/fluid')
+		S_P='X' #S_P stands for Slice Prefix
+		reduced_hf.create_group('/'+S_P+'/fluid')
 		extents_str=str(extents[1]*2)+" "+str(extents[0])
 		dims_str=str(dims[1]*2)+" "+str(dims[0])
 		i=n_hyperslabs/2
@@ -307,16 +300,16 @@ if __name__ == '__main__':
 		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
 		#	For hydro:
 		for name in storage_names:
-			qprint('	Writing '+name+' to X dataset in reduced hdf5 file')
+			qprint('	Writing '+name+' to '+S_P+' dataset in reduced hdf5 file')
 			scalar_quantity=np.vstack((hf['fluid'][storage_names[name]][0,:,:],hf2['fluid'][storage_names[name]].value[0,::-1,:]))
-			reduced_hf.create_dataset('X/fluid/'+storage_names[name],data=scalar_quantity)
-			at = et.SubElement(grid['X/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			reduced_hf.create_dataset(S_P+'/fluid/'+storage_names[name],data=scalar_quantity)
+			at = et.SubElement(grid[S_P+'/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
-			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:X/fluid/" + storage_names[name]
+			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:"+S_P+"/fluid/" + storage_names[name]
 		#	For abundance:
 		scalar_quantity=np.vstack((hf['abundance']['xn_c'][0,:,:,:],hf2['abundance']['xn_c'].value[0,::-1,:,:]))
-		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		reduced_hf.create_dataset(S_P+'/abundance/xn_c',data=scalar_quantity)
 		species_names=hf['abundance']['a_name'].value
 		if n_elemental_species-1==species_names.shape[0]:
 			species_names=np.append(species_names,'aux')
@@ -325,21 +318,21 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
-						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
-					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+					if not grid.has_key(S_P+'/Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+						grid[S_P+'/Abundance/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'/Abundance/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'/Abundance/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'/Abundance/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				else:
-					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+					attribute=et.SubElement(grid[S_P+'/Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
 				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
-				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"/abundance/xn_c"
 				n+=1
 		hf2.close()
 		######### Module: Y Slicer ###########
 		qprint("Slicing through Y axis")
-
+		S_P='Y'
 		i=n_hyperslabs/4
 		if args.repeat:
 			i=1
@@ -352,17 +345,16 @@ if __name__ == '__main__':
 		# for Hydro:
 
 		for name in storage_names:
-			qprint('	Writing '+name+' to Y dataset in reduced hdf5 file')
+			qprint('	Writing '+name+' to '+S_P+' dataset in reduced hdf5 file')
 			scalar_quantity=np.vstack((hf2['fluid'][storage_names[name]][0,:,:],hf3['fluid'][storage_names[name]].value[0,::-1,:]))
-			reduced_hf.create_dataset('Y/fluid/'+storage_names[name],data=scalar_quantity)
-			at = et.SubElement(grid['Y/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			reduced_hf.create_dataset(S_P+'/fluid/'+storage_names[name],data=scalar_quantity)
+			at = et.SubElement(grid[S_P+'/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 			hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
-			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Y/fluid/" + storage_names[name]
+			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:"+S_P+"/fluid/" + storage_names[name]
 		#	for Abundance:
-		S_P='Y/'
 		scalar_quantity=np.vstack((hf2['abundance']['xn_c'][0,:,:,:],hf3['abundance']['xn_c'].value[0,::-1,:,:]))
-		reduced_hf.create_dataset(S_P+'abundance/xn_c',data=scalar_quantity)
+		reduced_hf.create_dataset(S_P+'/abundance/xn_c',data=scalar_quantity)
 		species_names=hf['abundance']['a_name'].value
 		if n_elemental_species-1==species_names.shape[0]:
 			species_names=np.append(species_names,'aux')
@@ -371,19 +363,112 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
-						grid[S_P+'Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'Abundance'+'/'+element_name,GridType="Uniform")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Topology[1]")
-						et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"Abundance']/Geometry[1]")
-					attribute=et.SubElement(grid[S_P+'Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+					if not grid.has_key(S_P+'/Abundance/'+element_name): #If the grid for that element doesn't already exist, create it 
+						grid[S_P+'/Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=S_P+'/Abundance/'+element_name,GridType="Uniform")
+						et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Topology[1]")
+						et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+S_P+"/Abundance']/Geometry[1]")
+					attribute=et.SubElement(grid[S_P+'/Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				else:
-					attribute=et.SubElement(grid[S_P+'Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+					attribute=et.SubElement(grid[S_P+'/Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				dataElement = et.SubElement(attribute,"DataItem", ItemType="HyperSlab", Dimensions=extents_str)
 				et.SubElement(dataElement,"DataItem",Dimensions="3 3",Format="XML").text="0 0 "+str(el)+" 1 1 1 "+extents_str+" 1"
-				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"abundance/xn_c"
+				et.SubElement(dataElement,"DataItem",Dimensions=dims_str+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;:"+S_P+"/abundance/xn_c"
 				n+=1
 		hf2.close()
 		hf3.close()
+		######### Module: Auxilary Variables ##############################################################################################################################################################
+		if args.aux:
+			qprint("Creating derived values")
+			n_groups=hf['radiation']['raddim'][0]
+			n_species=hf['radiation']['raddim'][1]
+			energy_edge=hf['radiation']['unubi'].value
+			energy_center=hf['radiation']['unui'].value
+			d_energy=[]
+			for i in range(0,n_groups):
+				d_energy.append(energy_edge[i+1]-energy_edge[i])
+			d_energy=np.array(d_energy)
+			e3de = energy_center**3*d_energy
+			e5de = energy_center**5*d_energy
+			cvel=2.99792458e10
+			pi=3.141592653589793
+			ergmev = 1.602177e-6
+			h = 4.13567e-21
+			ecoef = 4.0 * pi * ergmev/(h*cvel)**3
+			#open new auxilary hdf file or overite existing one. 
+			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
+			aux_hf.create_group("/radiation") #or do nothing if exists
+			aux_hf.create_group("/mesh") #or do nothing if exists
+			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
+			# # initialize variables for parallel loop
+			psi0_c=hf['radiation']['psi0_c'] 
+			E_RMS_array=np.empty((n_hyperslabs,n_species,dims[2],dims[1],dims[0]))
+			num_cores=min(16,mp.cpu_count())
+			def compute_E_RMS_array_z(sl):	
+				sl+=1
+				i=sl
+				if args.repeat:
+					i=1
+				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				psi0_c=temp_hf['radiation']['psi0_c'][:]
+				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+				for n in range(0,n_species):
+					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
+					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
+					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+				return row
+			def compute_E_RMS_array(sl):	
+				sl+=1
+				i=sl
+				if args.repeat:
+					i=1
+				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				psi0_c=temp_hf['radiation']['psi0_c'][:]
+				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+				for n in range(0,n_species):
+					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
+					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
+					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+				return row
+			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
+			E_RMS_array=np.hstack(results)
+			for n in range(0,n_species):
+				qprint("Writing E_RMS_"+str(n)+" out to file")
+				reduced_hf.create_dataset(S_P+"/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
+			del E_RMS_array, results
+			
+			# ######## luminosity part ###########
+			# qprint("Computing luminosities")
+			# psi1_e=hf['radiation']['psi1_e']
+			# radius=hf['mesh']['x_ef'].value
+			# agr_e=hf['fluid']['agr_e'].value
+			# cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+			# lumin=np.empty((dims[2],dims[1],dims[0]))
+			# lumin_array=[]
+			# def compute_luminosity(species,sl):
+			# 	j=sl
+			# 	if args.repeat:
+			# 		sl=0
+			# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+			# 	psi1_e=temp_hf['radiation']['psi1_e']
+			# 	qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+			# 	br()
+			# 	del temp_hf
+			# 	return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
+			# lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
+			# for species in range(0,n_species):
+			# 	qprint("Computing luminosity for species "+str(species)+":")
+			# 	lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(0,sl) for sl in range(0,n_hyperslabs)))
+			# qprint("########################################")
+			# for n,lumin in enumerate(lumin_array):
+			# 	qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+			# 	aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+			# aux_hf.close()
+			# del aux_hf,lumin_array,lumin,mask
+		############################################################################################################################################################################################
 		######### Module: Xdmf Document writer ###########
 		try:
 			f=open(file_out_name,'w')
