@@ -240,7 +240,6 @@ if __name__ == '__main__':
 			"Nuclear_Heating_rate":"dudt_nuc",
 			"Pressure":"press",
 			"Temperature":"t_c",
-			"nse_flag":"e_int",
 		}
 		reduced_hf.create_group('/Z/fluid')
 		extents_str=str(extents[2])+" "+str(extents[0])
@@ -261,6 +260,20 @@ if __name__ == '__main__':
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:Z/fluid/" + storage_names[name]
 		#	For abundance:
 		S_P='Z'
+		
+		at = et.SubElement(grid[S_P+'/Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+		hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+		et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
+		et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Int",Format="HDF").text = "&h5path;:Z/abundance/nse_flag"
+		scalar_quantity=hf['abundance']['nse_c'][:,dims[1]/2,:]
+		for sl in range(2,n_hyperslabs+1):
+			i=sl
+			if args.repeat:
+				i=1
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			scalar_quantity=np.vstack((scalar_quantity,temp_hf['abundance']['nse_c'][:,dims[1]/2,:]))
+		reduced_hf.create_dataset(S_P+'/abundance/nse_flag',data=scalar_quantity)
+
 		scalar_quantity=hf['abundance']['xn_c'][:,dims[1]/2,:,:]
 		for sl in range(2,n_hyperslabs+1):
 			i=sl
@@ -394,15 +407,10 @@ if __name__ == '__main__':
 			ergmev = 1.602177e-6
 			h = 4.13567e-21
 			ecoef = 4.0 * pi * ergmev/(h*cvel)**3
-			#open new auxilary hdf file or overite existing one. 
-			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
-			aux_hf.create_group("/radiation") #or do nothing if exists
-			aux_hf.create_group("/mesh") #or do nothing if exists
 			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 			# # initialize variables for parallel loop
-			psi0_c=hf['radiation']['psi0_c'] 
-			E_RMS_array=np.empty((n_hyperslabs,n_species,dims[2],dims[1],dims[0]))
 			num_cores=min(16,mp.cpu_count())
+			E_RMS_array=np.empty((n_hyperslabs,n_species,dims[2],dims[0]))
 			def compute_E_RMS_array_z(sl):	
 				sl+=1
 				i=sl
@@ -411,27 +419,17 @@ if __name__ == '__main__':
 				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
 				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
 				psi0_c=temp_hf['radiation']['psi0_c'][:]
-				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[0]))
+				br()
 				for n in range(0,n_species):
-					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+					numerator=np.sum(psi0_c[:,dim[1]/2,:,n]*e5de,axis=3)
+					qprint(numerator.shape)
+					denominator=np.sum(psi0_c[:,dim[1]/2,:,n]*e3de,axis=3)
+					row[n][:][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
-			def compute_E_RMS_array(sl):	
-				sl+=1
-				i=sl
-				if args.repeat:
-					i=1
-				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-				psi0_c=temp_hf['radiation']['psi0_c'][:]
-				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
-				for n in range(0,n_species):
-					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
-				return row
+			br()
 			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+			
 			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 			E_RMS_array=np.hstack(results)
@@ -465,9 +463,9 @@ if __name__ == '__main__':
 			# qprint("########################################")
 			# for n,lumin in enumerate(lumin_array):
 			# 	qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-			# 	aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
-			# aux_hf.close()
-			# del aux_hf,lumin_array,lumin,mask
+			# 	reduced_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+			# del lumin_array,lumin,mask
+		reduced_hf.close()
 		############################################################################################################################################################################################
 		######### Module: Xdmf Document writer ###########
 		try:

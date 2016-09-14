@@ -325,7 +325,7 @@ if __name__ == '__main__':
 				"Pressure":"press",
 				"Temperature":"t_c",
 				# "mask":"",#computed quantity to be added later
-				"nse_flag":"e_int",
+				"Density":"rho_c",
 			}
 			for name in storage_names:
 				at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
@@ -348,6 +348,28 @@ if __name__ == '__main__':
 						n+=1
 		############################################################################################################################################################################################
 		# Abundance part:
+		at = et.SubElement(grid['Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+		et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
+		dim_nse=hf['abundance']['nse_c'].shape
+		dim_nse_str=str(dim_nse[0])+' '+str(dim_nse[1])+' '+str(dim_nse[2])
+		if is_3d:
+			superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=str(dim_nse[0]*slices)+' '+str(dim_nse[1])+' '+str(dim_nse[2]))
+		n=1
+		for m in range(0, int((slices-1)/10)+1):
+			if is_3d:
+				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m),10])),Dimensions=str(dim_nse[0]*[slices%10,10][slices-m*10>=10])+" "+str(dim_nse[1])+" "+str(dim_nse[2]))
+			for i in range(0,min(slices-m*10,10)):
+				return_element=hyperslab
+				if 'fun' in globals():
+					return_element=fun
+				if args.repeat:
+					et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/nse_c"
+				else:
+					et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/nse_c"
+				n+=1
+		del dim_nse,dim_nse_str
+
 		species_names=hf['abundance']['a_name'].value
 		if n_elemental_species-1==species_names.shape[0]:
 			species_names=np.append(species_names,'aux')
