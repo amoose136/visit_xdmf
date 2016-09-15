@@ -3,7 +3,7 @@
 # | |  | \ | |     | | \ \  | |  | | | |     | |     | |  | \ 
 # | |__| | | |---- | |  | | | |  | | | |     | |---- | |__| | 
 # |_|  \_\ |_|____ |_|_/_/  \_|__|_| |_|____ |_|____ |_|  \_\ 
-# 		A script to reduce 3d datasets to 2d ones                
+# 		A script to reduce 3d datasets to 2d               
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
@@ -321,6 +321,15 @@ if __name__ == '__main__':
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 			et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:"+S_P+"/fluid/" + storage_names[name]
 		#	For abundance:
+
+		at = et.SubElement(grid[S_P+'/Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+		hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+		et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
+		et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Int",Format="HDF").text = "&h5path;:Z/abundance/nse_flag"
+		scalar_quantity=np.vstack((hf['abundance']['nse_c'][0,:,:],hf2['abundance']['nse_c'].value[0,::-1,:]))
+		reduced_hf.create_dataset(S_P+'/abundance/nse_flag',data=scalar_quantity)
+
+
 		scalar_quantity=np.vstack((hf['abundance']['xn_c'][0,:,:,:],hf2['abundance']['xn_c'].value[0,::-1,:,:]))
 		reduced_hf.create_dataset(S_P+'/abundance/xn_c',data=scalar_quantity)
 		species_names=hf['abundance']['a_name'].value
@@ -416,28 +425,67 @@ if __name__ == '__main__':
 				i=sl
 				if args.repeat:
 					i=1
-				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
 				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-				psi0_c=temp_hf['radiation']['psi0_c'][:]
+				psi0_c=temp_hf['radiation']['psi0_c'][:,dims[1]/2,:,:]
 				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[0]))
-				br()
 				for n in range(0,n_species):
-					numerator=np.sum(psi0_c[:,dim[1]/2,:,n]*e5de,axis=3)
-					qprint(numerator.shape)
-					denominator=np.sum(psi0_c[:,dim[1]/2,:,n]*e3de,axis=3)
+					numerator=np.sum(psi0_c[:,:,n]*e5de,axis=2)
+					denominator=np.sum(psi0_c[:,:,n]*e3de,axis=2)
 					row[n][:][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
-			br()
+			def compute_E_RMS_array_x():	
+				i=n_hyperslabs
+				if args.repeat:
+					i=1
+				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				psi0_c=hf['radiation']['psi0_c'][0,:,:,:]
+				row=np.empty((n_species,dims[2]*2,dims[0]))
+				for n in range(0,n_species):
+					numerator=np.sum(psi0_c[:,:,n,:]*e5de,axis=2)
+					denominator=np.sum(psi0_c[:,:,n,:]*e3de,axis=2)
+					row[n][0:dims[2]][:]=np.sqrt(numerator/(denominator+1e-100))
+				psi0_c=hf['radiation']['psi0_c'][0,:,:,:]
+				for n in range(0,n_species):
+					numerator=np.sum(psi0_c[:,:,n,:]*e5de,axis=2)
+					denominator=np.sum(psi0_c[:,:,n,:]*e3de,axis=2)
+					row[n][dims[2]:dims[2]*2][:]=np.sqrt(numerator/(denominator+1e-100))
+				return row.shape
+			def radiation_xdmf(xdmf_alias_name,hdf_variable_name,S_P,xdmf_grid,hdf_directory,dims_str,extents_str):
+				# Fix potential directory issue
+				if hdf_directory[0]!='/':
+					hdf_directory='/'+hdf_directory
+				if hdf_directory[:-1]!='/':
+					hdf_directory+='/'
+				if xdmf_grid[0]!='/':
+					xdmf_grid='/'+xdmf_grid
+				# Make xdmf elements
+				at = et.SubElement(grid[S_P+xdmf_grid],"Attribute",Name=xdmf_alias_name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+				hyperslab = et.SubElement(at, "DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
+				et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path;:"+S_P+hdf_directory+hdf_variable_name
+			S_P='Z'
+			qprint("Z slice E_RMS:")
+			results=np.array((n_hyperslabs,n_species,dims[2],dims[0]))
 			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
-			
 			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 			E_RMS_array=np.hstack(results)
-			for n in range(0,n_species):
-				qprint("Writing E_RMS_"+str(n)+" out to file")
-				reduced_hf.create_dataset(S_P+"/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
+			qprint("Done.\nWriting results:")
+			for n,sp in enumerate(['e','e-bar','mt','mt-bar']):
+				qprint("	Writing "+S_P+"/Radiation/E_RMS_"+sp+" out to HDF5 file")
+				reduced_hf.create_dataset(S_P+"/radiation/E_RMS_"+sp,data=E_RMS_array[n])
 			del E_RMS_array, results
-			
+			# Corresponding xdmf:
+			extents_str=str(extents[2])+" "+str(extents[0])
+			dims_str=str(dims[2])+" "+str(dims[0])
+			for n in ['e','e-bar','mt','mt-bar']:
+				qprint("	Creating "+S_P+"/Radiation/E_RMS_"+str(n)+" xdmf element")
+				radiation_xdmf('E_RMS_'+str(n),'E_RMS_'+str(n),S_P,'/Radiation','/radiation',dims_str,extents_str)
+
+			extents_str=str(extents[1]*2)+" "+str(extents[0])
+			dims_str=str(dims[1]*2)+" "+str(dims[0])
 			# ######## luminosity part ###########
 			# qprint("Computing luminosities")
 			# psi1_e=hf['radiation']['psi1_e']

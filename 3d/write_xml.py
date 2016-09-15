@@ -406,17 +406,17 @@ if __name__ == '__main__':
 		##Create luminosity and E_RMS xdmf
 		if not args.disable or "radiation" not in args.disable:
 			n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
-			for sp in range(0,n_species):
+			for sp in ['e','e-bar','mt','mt-bar']:
 				# E_RMS_[sp]:
-				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+str(sp)
+				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+sp
 				# Luminosity_[sp]:
-				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+str(sp),AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+str(sp)
+				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+sp
 
 		############################################################################################################################################################################################
 		# Write document tree to file
