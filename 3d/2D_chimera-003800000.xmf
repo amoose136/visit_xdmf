@@ -2,9 +2,9 @@
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" [
   <!ENTITY Slice_YZ_extent_theta "360">
   <!ENTITY Slice_XZ_extent_theta "360">
-  <!ENTITY Extent_r "340">
+  <!ENTITY Extent_r "540">
   <!ENTITY Slice_XY_extent_theta "180">
-  <!ENTITY Dim_r "341">
+  <!ENTITY Dim_r "541">
   <!ENTITY h5pathZ "2D_chimera-XY-003800000.h5">
   <!ENTITY h5pathY "2D_chimera-XZ-003800000.h5">
   <!ENTITY h5pathX "2D_chimera-YZ-003800000.h5">

@@ -6,36 +6,16 @@
 # 		A script to reduce 3d datasets to 2d               
 from __future__ import print_function
 # For diagnostics, time the execution of the code
-import time
+import time, argparse
+from pdb import set_trace as br
+# for variable sharing of arguments with the other import statements:
+try:
+	import __builtins__
+except: 
+	import __builtin__
 start_time = time.time()
-# Import all the things robustly
-############################################################################################################################################################################################
-import sys, os, math, socket, argparse, re
-import subprocess as sp
-import numpy as np
-from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
-import multiprocessing as mp #For parallel speedup in derivative values 
-#define an error printing function for error reporting to terminal STD error IO stream
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-#define a standard printing function that only functions if there is no silence flag on script invocation
-def qprint(*arg,**kwargs):
-	if not args.quiet:
-		print(*arg,**kwargs)
-# For ORNL
-if socket.gethostname()[:4]=='rhea':
-	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
-	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
-if socket.gethostname()[:5]=='titan':
-	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
-# For my laptop
-elif socket.gethostname()=='Lycoris':
-	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
-
-from joblib import Parallel, delayed
-import six
 if __name__ == '__main__':
-	# Contstruct Parser:
+	# construct parser
 	parser = argparse.ArgumentParser(description="Reduce 3d chimera files to 2d files")
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
@@ -43,67 +23,20 @@ if __name__ == '__main__':
 	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 	parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
+	parser.add_argument('--threads',dest='threads',action='store',metavar='int',type=int, nargs=1, help='specify number of threads')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 	parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
 	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiation components')
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
-	args=parser.parse_args()
-	#End Parser construction
-	#####################################################################################################################################################################################################
-	#This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
+	args = parser.parse_args()
+	# share arguments with other module import script
 	try:
-		#Most likly to fail part.
-		import h5py
-	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
-	except ImportError:
-		try:
-			qprint("Trying to run under reloaded modules")
-			try:
-				if not args.norepeat:
-					if socket.gethostname()[:4]=='rhea':
-						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
-					if socket.gethostname()[:5]=='titan':
-						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
-				else:
-					raise ValueError('aw crap, already reloaded and still failed to import something')
-			except:
-				#redo the offending call so the error can display
-				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
-				eprint("Could not import modules")
-				raise ValueError('aw crap')
-			qprint("Finished")
-		except:
-			eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
-		sys.exit()
-	#Robustly import an xml writer/parser
-	try:
-		from lxml import etree as et
-		qprint("Running with lxml.etree")
-	except ImportError:
-		try:
-			# Python 2.5
-			import xml.etree.cElementTree as et
-			import xml.dom.minidom as md
-			qprint("Running with cElementTree on Python 2.5+")
-		except ImportError:
-			try:
-			# Python 2.5
-				import xml.etree.ElementTree as et
-				qprint("Running with ElementTree on Python 2.5+")
-			except ImportError:
-				try:
-					# normal cElementTree install
-					import cElementTree as et
-					qprint("running with cElementTree")
-				except ImportError:
-					try:
-						# normal ElementTree install
-						import elementtree.ElementTree as et
-						qprint("running with ElementTree")
-					except ImportError:
-						eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
+		__builtins__.args=args
+	except:
+		__builtin__.args=args
+	from all_the_things import * #This notation is generally frowned upon but it is the cleanest way to do this here and should be safe in this instance
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
@@ -442,10 +375,10 @@ if __name__ == '__main__':
 			ergmev = 1.602177e-6
 			h = 4.13567e-21
 			ecoef = 4.0 * pi * ergmev/(h*cvel)**3
+			step=dims[1]/n_hyperslabs
 			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 			# # initialize variables for parallel loop
-			num_cores=min(16,mp.cpu_count())
-			E_RMS_array=np.empty((n_hyperslabs,n_species,dims[2],dims[0]))
+			E_RMS_array=np.empty((n_species,dims[2],dims[0]))
 			def compute_E_RMS_array_z(sl):	
 				sl+=1
 				i=sl
@@ -492,12 +425,18 @@ if __name__ == '__main__':
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 2",Format="XML").text="0 0 1 1 "+extents_str
 				et.SubElement(hyperslab,"DataItem",Dimensions=dims_str,NumberType="Float",Precision="8",Format="HDF").text = "&h5path"+S_P+";:"+hdf_directory+hdf_variable_name
 			S_P='Z'
+			results=[]
 			qprint("Z slice E_RMS:")
-			results = np.array((n_hyperslabs,n_species,dims[2],dims[0]))
-			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+			if num_cores!=1:
+				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+				E_RMS_array=np.hstack(results)
+			else:
+				for sl in range(0,n_hyperslabs):
+					E_RMS_array[:,sl*step:(sl+1)*step,:]=compute_E_RMS_array_z(sl)
+
 			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-			E_RMS_array=np.hstack(results)
+			
 			qprint("Done.\nWriting results:")
 			for n,sp in enumerate(['e','e-bar','mt','mt-bar']):
 				qprint("	Writing /Radiation/E_RMS_"+sp+" out to "+con_sp[S_P]+" HDF5 file")
