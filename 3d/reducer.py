@@ -36,7 +36,7 @@ if __name__ == '__main__':
 		__builtins__.args=args
 	except:
 		__builtin__.args=args
-	from all_the_things import * #This notation is generally frowned upon but it is the cleanest way to do this here and should be safe in this instance
+	from ism import * #This notation is generally frowned upon but it is the cleanest way to do this here and should be safe in this instance
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
@@ -429,14 +429,13 @@ if __name__ == '__main__':
 			qprint("Z slice E_RMS:")
 			if num_cores!=1:
 				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+				#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+				qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 				E_RMS_array=np.hstack(results)
 			else:
 				for sl in range(0,n_hyperslabs):
 					E_RMS_array[:,sl*step:(sl+1)*step,:]=compute_E_RMS_array_z(sl)
 
-			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-			
 			qprint("Done.\nWriting results:")
 			for n,sp in enumerate(['e','e-bar','mt','mt-bar']):
 				qprint("	Writing /Radiation/E_RMS_"+sp+" out to "+con_sp[S_P]+" HDF5 file")

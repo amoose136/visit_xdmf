@@ -1,21 +1,24 @@
 from __future__ import print_function
-import sys, os, math, socket, argparse, re
-import subprocess as sp
-import numpy as np
-from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
-import multiprocessing as mp #For parallel speedup in derivative values 
+# global sys, os, math, socket, argparse, re, sp, np, br, mp, h5py, six, et
 try:
 	import __builtins__
 	args=__builtins__.args
 except: 
 	import __builtin__
 	args=__builtin__.args
+
 def eprint(*arg, **kwarg):
 	print(*arg, file=sys.stderr, **kwarg)
 # #define a standard printing function that only functions if there is no silence flag on script invocation
 def qprint(*arg,**kwargs):
 	if not args.quiet:
 		print(*arg,**kwargs)
+
+import sys, os, math, socket, argparse, re
+import subprocess as sp
+import numpy as np
+from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
+import multiprocessing as mp #For parallel speedup in derivative values 
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
