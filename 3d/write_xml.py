@@ -28,7 +28,6 @@ if socket.gethostname()[:5]=='titan':
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
 
-from joblib import Parallel, delayed
 import six
 if __name__ == '__main__':
 	# try:
@@ -47,6 +46,7 @@ if __name__ == '__main__':
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 	# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
+	parser.add_argument('--threads',dest='threads',action='store',metavar='int',type=int, nargs=1, help='specify number of threads')
 	parser.add_argument('--slices',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
 	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
 	parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
@@ -112,6 +112,22 @@ if __name__ == '__main__':
 						qprint("running with ElementTree")
 					except ImportError:
 						eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
+	try:
+		mp.Semaphore()
+		from joblib import Parallel, delayed
+		num_cores=min(16,mp.cpu_count())
+		if args.threads:
+			num_cores=args.threads[0]
+			qprint("Set threads to "+str(num_cores))
+	except:
+		eprint("Warning: joblib did not load correctly")
+		qprint("	Attempting to override thread count to 1 and skip parallelization")
+		num_cores=1
+		if args.threads and args.threads!=1:
+			eprint("	Warning: cannot override thread count, thread flag ignored")
+	if args.repeat and num_cores!=1:
+		num_cores=1
+		qprint("Running with single thread")
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
@@ -174,7 +190,7 @@ if __name__ == '__main__':
 			ergmev = 1.602177e-6
 			h = 4.13567e-21
 			ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
-
+			step=dims[1]/n_hyperslabs
 			#open new auxilary hdf file or overite existing one. 
 			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
 			aux_hf.create_group("/radiation") #or do nothing if exists
@@ -182,8 +198,6 @@ if __name__ == '__main__':
 			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 			# # initialize variables for parallel loop
 			psi0_c=hf['radiation']['psi0_c'] 
-			E_RMS_array=np.empty((slices,n_species,dims[2],dims[1],dims[0]))
-			num_cores=min(16,mp.cpu_count())
 			def compute_E_RMS_array(sl):	
 				sl+=1
 				i=sl
@@ -198,14 +212,21 @@ if __name__ == '__main__':
 					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
 					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
-			results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
-			#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-			qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-			E_RMS_array=np.hstack(results)
+			if num_cores!=1:
+				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
+				#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+				qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
+				E_RMS_array=np.hstack(results)
+			else:
+				E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
+				for sl in range(0,n_hyperslabs):
+					E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
 			for n in range(0,n_species):
 				qprint("Writing E_RMS_"+str(n)+" out to file")
 				aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
-			del E_RMS_array, results
+			del E_RMS_array
+			if 'results' in locals():
+				del results
 			
 			# ######## luminosity part ###########
 			qprint("Computing luminosities")
@@ -227,7 +248,11 @@ if __name__ == '__main__':
 			lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
 			for species in range(0,n_species):
 				qprint("Computing luminosity for species "+str(species)+":")
-				lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(0,sl) for sl in range(0,n_hyperslabs)))
+				if num_cores!=1:
+					lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
+				else:
+					for sl in range(0,n_hyperslabs):
+						lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
 			qprint("########################################")
 			for n,lumin in enumerate(lumin_array):
 				qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
