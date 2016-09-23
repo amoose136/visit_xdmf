@@ -83,16 +83,18 @@ except ImportError:
 				except ImportError:
 					eprint("Fatal error: Failed to import ElementTree from any known place. XML writing is impossible. ")
 try:
+	mp.Semaphore()
 	from joblib import Parallel, delayed
 	num_cores=min(16,mp.cpu_count())
 	if args.threads:
 		num_cores=args.threads[0]
 		qprint("Set threads to "+str(num_cores))
 except:
-	eprint("Error: joblib did not load correctly")
+	eprint("Warning: joblib did not load correctly")
+	qprint("	Attempting to override thread count to 1 and skip parallelization")
 	num_cores=1
 	if args.threads and args.threads!=1:
-		eprint("	cannot override thread count")
+		eprint("	Warning: cannot override thread count, thread flag ignored")
 if args.repeat and num_cores!=1:
 	num_cores=1
 	qprint("Running with single thread")
