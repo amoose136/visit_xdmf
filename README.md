@@ -49,15 +49,15 @@ Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions u
 * __`--quiet`__   
 This option was created so the script can run "headless" and will only output to the stderr data stream in the event of a problem. If a human calls this script, it's probably better not to use this option as if something breaks or hangs slightly or unpredictably, one won't have much idea where or why.
 
-* __`--slices int`__
+* __`--slices int`__   
 This option will limit the number of wedges used for diagnostic reasons. For example on the 003800000 time step there are 30 slices and each is ~1.8GB so to have them all in a directory requires 54GB of space. This might be a bit much to download so if you only download the first 5 or so you can limit the script to use just those by calling `$python write_xml.py chimera_003800000_grid_1_01.h5 --slices 5`. The output XDMF file when opened with VisIt will just display those wedges instead of the entire sphere. 
 
-* __`--norepeat`__
+* __`--norepeat`__   
 Disregard this option. It's internally needed to prevent the script from infinitely calling itself when reloading modules on Rhea if something breaks really badly. If the wrong modules are loaded on Rhea or Titan the script will automatically spawn the a sub shell, load the right modules, and then call itself. The problem is if it doesn't work and this flag isn't used it will just continue to do this forever so this option makes it so that it won't spawn any sub-shells and ends the madness. 
 
-* __`--threads int`__
+* __`--threads int`__   
 For the auxiliary/computed variables the script runs with up to 16 cores. Unfortunately I currently have no way of distinguishing real from logical cores and if the script runs with more cores than there are real cores it will actually run dramatically slower. This option simply provides some more manual control over how the script runs. On Rhea there were some permission changes recently that broke the multiprocessing module so the this works as a manual override by just setting the threads=1 with `--threads 1`.
 
-* __`--prefix [str]`__ or __`-p [str]`__
+* __`--prefix [str]`__ or __`-p [str]`__   
 Suppose you have the input filename as `foo_0012345_grid_1_01.h5` and use the command `$python write_xml.py foo_0012345_grid_1_01.h5 -s`. Ordinarily one would get the file `foo-0012345-1.xmf` but if one instead called: `$python write_xml.py foo_0012345_grid_1_01.h5 -s -prefix bar` one would instead get `bar-0012345-1.xmf`.
 
