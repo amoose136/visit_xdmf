@@ -1,9 +1,8 @@
 
 This is my work from summer 2016. The goal is to add proper XDMF support to VisIt for use in the Chimera collaboration. It builds on the work Jake Rosa did during summer 2014. In this installation is a pair of large files managed by Git LFS that can also be found on the UTK newton server in /lustre/projects/astro/chimera/lentz/. The files are chimera_00774_grid_1_01.h5, and d96-2d-sn160-00774.silo. The SILO file was created with a script from the HDF5 file and displays properly in VisIt. We seek to eliminate the need for this script by using XDMF. With this goal in mind, two python scripts now exist within this repository: write_xml.py and reducer.py. 
 
-write_xml.py
-============
-Write_xml.py takes input HDF files from chimera and makes XDMF to read them. It also optionally reduces them down to a size Bellarophon can handle by copying over only the hydro and abundance scalars. Radiation quantities are computed optionally and also added. If a reduction step is not taken but the option to use computed quantities is selected, the computed quantities will be placed in another HDF file with the same name as the input file only without 
+# write_xml.py
+Write_xml.py takes input HDF files from chimera and makes XDMF to read them. It also optionally reduces them down to a size Bellarophon can handle by copying over only the hydro and abundance scalars. Radiation quantities are computed optionally and also added. If a reduction step is not taken but the option to use computed quantities is selected, the computed quantities will be placed in another HDF file with the same name as the input file only with the wedge number replaced with the string `_aux`. 
 
 ###Usage
     usage: write_xml.py [-h] [--threads int] [--slices [int]] [--prefix [str]]
@@ -300,6 +299,6 @@ Writing On_grid_mask to auxillary file
 ___
 Once these files are created one needs only the the xdmf file in VisIt and it should behave almost as drop-in replacement for Silo. 
 
-# Reducer.py
+# reducer.py
 TBA 
 (The short story is that it's almost the same in invocation as write_xml.py but it works only on 3d files and slices through the x,y, and z axes to create 3 2D HDF files and an xdmf file to link them together nicely. It also makes the auxiliary scalars and if you're just going to slice the data about one of these plane in VisIt anyway, this is much much faster.)
