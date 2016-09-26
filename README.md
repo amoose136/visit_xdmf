@@ -1,5 +1,5 @@
 
-This is my work from summer 2016. The goal is to add proper XDMF support to VisIt for use in the Chimera collaboration. It builds on the work Jake Rosa did during summer 2014. In this installation two paired large files managed by git lfs that can also be found on the UTK newton server in /lustre/projects/astro/chimera/lentz/. The files are chimera_00774_grid_1_01.h5, and d96-2d-sn160-00774.silo. The SILO file was created with a script from the HDF5 file and displays properly in VisIt. We seek to eliminate the need for this script by using XDMF. With this goal in mind, two python scripts now exist within this repository: write_xml.py and reducer.py. 
+This is my work from summer 2016. The goal is to add proper XDMF support to VisIt for use in the Chimera collaboration. It builds on the work Jake Rosa did during summer 2014. In this installation is a pair of large files managed by Git LFS that can also be found on the UTK newton server in /lustre/projects/astro/chimera/lentz/. The files are chimera_00774_grid_1_01.h5, and d96-2d-sn160-00774.silo. The SILO file was created with a script from the HDF5 file and displays properly in VisIt. We seek to eliminate the need for this script by using XDMF. With this goal in mind, two python scripts now exist within this repository: write_xml.py and reducer.py. 
 
 write_xml.py
 ============
@@ -41,12 +41,14 @@ An example call might be like:
 
     $python write_xml.py chimera_003800000_grid_1_01.h5
 
-This would just create a file titled `chimera_grid-1_step-003800000.xmf`
-Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions usually but this is more descriptive so one can use can use this extension instead of __.xmf__ by adding the `--xdmf` flag. Additionally, if one would rather no have the words _step_ and _grid_ in the file name, these can be eliminated by using the `--short` flag. Calling the script with both these options will create a file with the same contents as before but now will the file name `chimera-1-003800000.xdmf`
+This would just create a file titled `chimera_grid-1_step-003800000.xmf` 
 
-**Options:**
+####Options
+* __`--short`__ or __`-s`__   
+If one would rather not have the words _step_ and _grid_ in the file name, these can be eliminated by using the `--short` flag.
+Calling `$python write_xml.py foo_0123_grid_1_01.h5 -s` will yield a xdmf file name titled `foo-1-0123.xmf` instead of `foo_grid-1_step-0123.xmf` as would be default.
 
-* __`--quiet`__   
+* __`--quiet`__ or __`-q`__  
 This option was created so the script can run "headless" and will only output to the stderr data stream in the event of a problem. If a human calls this script, it's probably better not to use this option as if something breaks or hangs slightly or unpredictably, one won't have much idea where or why.
 
 * __`--slices int`__   
@@ -63,9 +65,68 @@ Suppose you have the input filename as `foo_0012345_grid_1_01.h5` and use the co
 
 * __`--disable str [str]`__   
 Will skip writing XDMF for any of the following specified sections:
-    * `abundance`
-    * `hydro`
-    * `radiation` 
-They can also be combined like so:
+    + `abundance`
+    + `hydro`
+    + `radiation`
+
+    They can also be combined like so:
     `$python write_xml.py foo_12345_grid_1_01.h5 --disable abundance radiation`
-This would only write xdmf for the hydro variables.
+    This would only write xdmf for the hydro variables.
+
+* __`--repeat`__ or __`-r`__   
+If this option is invoked the data from the first wedge will be used for all wedges. This is useful for diagnostic reasons.
+
+* __`--auxiliary`__ or __`-a`__   
+If this option is invoked the script will also create an auxiliary HDF file containing the computed quantities.
+
+* __`--directory [str]`__   
+By default the script will output the XDMF file in the same directory as the input HDF file. This allows you to override by providing a path relative to the terminal location at the time the script is called. Example:
+    `$python write_xml.py ../foo_12345_grid_1_01.h5 --directory .` 
+will output the XDMF file to the current directory instead of `..`.
+
+* __`--xdmf`__   
+Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions usually but this is more descriptive so one can use this extension instead of __.xmf__ by adding the `--xdmf` flag.
+
+
+####Examples
+With shorter style filename option and also the xdmf flag (headless):
+
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -qs --xdmf`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo-1-123.xdmf` is created
+
+___
+With computed auxiliary scalars like E_RMS_[et,et-bar,mt,mt-bar] and Luminosity_[et,et-bar,mt,mt-bar] while also using the shorter naming convention (headless): 
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_007_grid_2_01.h5 -qas`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo-2-007.xmf`,`foo_007_grid_2_aux.h5` are created
+___
+Using only the first slice (headless):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -q --slices 1`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo_grid-1_step-123.xmf` is created
+___
+Using the data from first wedge for the entire grid (headless):
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -qr`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo_grid-1_step-123.xmf` is created
+___
+Using the data from first wedge for the entire grid:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -r`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: 
+STDOUT: 
+```
+Running with lxml.etree
+Running with single thread
+--- foo_grid-1_step-123.xmf created in 0.657558917999 seconds ---
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo_grid-1_step-123.xmf` is created
+___
+Using the data from the first wedge for the entire grid and compute auxiliary scalars like E_RMS_[et,et-bar,mt,mt-bar] and Luminosity_[et,et-bar,mt,mt-bar] and use shorter naming convention:
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -rsa`
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: 
+STDOUT: 
+```
+Running with lxml.etree
+Running with single thread
+--- foo_grid-1_step-123.xmf created in 0.657558917999 seconds ---
+```
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo_123_grid_1_aux.h5` is created
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo-1-123.xmf` is created (knows about both `foo_123_grid_1_aux.h5` and `foo_123_grid_1_`[00..N_wedges]`.h5`)
+
