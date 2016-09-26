@@ -43,10 +43,10 @@
           <DataItem Dimensions="1 180 542" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/fluid/wBVMD</DataItem>
         </DataItem>
       </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="nse_flag">
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Density">
         <DataItem Dimensions="180 540" ItemType="HyperSlab">
           <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/fluid/e_int</DataItem>
+          <DataItem Dimensions="1 180 542" Format="HDF" NumberType="Float" Precision="8">&h5path;01.h5:/fluid/rho_c</DataItem>
         </DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Electron_fraction">
@@ -119,6 +119,12 @@
     <Grid Name="Abundance">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
       <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="nse_flag">
+        <DataItem Dimensions="180 540" ItemType="HyperSlab">
+          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
+          <DataItem Dimensions="1 180 543" Format="HDF" NumberType="Int">&h5path;01.h5:/abundance/nse_c</DataItem>
+        </DataItem>
+      </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Name="d">
         <DataItem Dimensions="180 540" ItemType="HyperSlab">
           <DataItem Dimensions="3 4" Format="XML">0 0 0 0 1 1 1 1 1 180 540 1</DataItem>
@@ -147,54 +153,6 @@
     <Grid Name="Radiation">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
       <Geometry Reference="/Xdmf/Domain/Grid[1]/Geometry[1]"/>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="E_RMS_0">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_0</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Luminosity_0">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_0</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="E_RMS_1">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_1</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Luminosity_1">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_1</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="E_RMS_2">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_2</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Luminosity_2">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_2</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="E_RMS_3">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/E_RMS_3</DataItem>
-        </DataItem>
-      </Attribute>
-      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="180 540" Name="Luminosity_3">
-        <DataItem Dimensions="180 540" ItemType="HyperSlab">
-          <DataItem Dimensions="3 3" Format="XML">0 0 0 1 1 1 1 180 540</DataItem>
-          <DataItem Dimensions="1 180 542" Format="HDF">&h5path;aux.h5:/radiation/Luminosity_3</DataItem>
-        </DataItem>
-      </Attribute>
     </Grid>
     <Grid Name="Mesh">
       <Topology Reference="/Xdmf/Domain/Grid[1]/Topology[1]"/>
