@@ -58,6 +58,14 @@ Disregard this option. It's internally needed to prevent the script from infinit
 * __`--threads int`__   
 For the auxiliary/computed variables the script runs with up to 16 cores. Unfortunately I currently have no way of distinguishing real from logical cores and if the script runs with more cores than there are real cores it will actually run dramatically slower. This option simply provides some more manual control over how the script runs. On Rhea there were some permission changes recently that broke the multiprocessing module so the this works as a manual override by just setting the threads=1 with `--threads 1`.
 
-* __`--prefix [str]`__ or __`-p [str]`__   
+* __`--prefix str`__ or __`-p str`__   
 Suppose you have the input filename as `foo_0012345_grid_1_01.h5` and use the command `$python write_xml.py foo_0012345_grid_1_01.h5 -s`. Ordinarily one would get the file `foo-0012345-1.xmf` but if one instead called: `$python write_xml.py foo_0012345_grid_1_01.h5 -s -prefix bar` one would instead get `bar-0012345-1.xmf`.
 
+* __`--disable str [str]`__   
+Will skip writing XDMF for any of the following specified sections:
+    * `abundance`
+    * `hydro`
+    * `radiation` 
+They can also be combined like so:
+    `$python write_xml.py foo_12345_grid_1_01.h5 --disable abundance radiation`
+This would only write xdmf for the hydro variables.
