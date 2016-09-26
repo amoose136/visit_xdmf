@@ -90,43 +90,216 @@ Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions u
 
 ####Examples
 With shorter style filename option and also the xdmf flag (headless):
-
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -qs --xdmf`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo-1-123.xdmf` is created
-
+**shell:** `$python write_xml.py foo_123_grid_1_01.h5 -qs --xdmf`
+**output:** `foo-1-123.xdmf` is created
 ___
 With computed auxiliary scalars like E_RMS_[et,et-bar,mt,mt-bar] and Luminosity_[et,et-bar,mt,mt-bar] while also using the shorter naming convention (headless): 
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_007_grid_2_01.h5 -qas`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo-2-007.xmf`,`foo_007_grid_2_aux.h5` are created
+**shell:** `$python write_xml.py foo_007_grid_2_01.h5 -qas`
+**output:** `foo-2-007.xmf`,`foo_007_grid_2_aux.h5` are created
 ___
 Using only the first slice (headless):
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -q --slices 1`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo_grid-1_step-123.xmf` is created
+**shell:** `$python write_xml.py foo_123_grid_1_01.h5 -q --slices 1`
+**output:** `foo_grid-1_step-123.xmf` is created
 ___
 Using the data from first wedge for the entire grid (headless):
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -qr`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: `foo_grid-1_step-123.xmf` is created
+**shell:** `$python write_xml.py foo_123_grid_1_01.h5 -qr`
+**output:** `foo_grid-1_step-123.xmf` is created
 ___
 Using the data from first wedge for the entire grid:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -r`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: 
+**shell:** `$python write_xml.py foo_123_grid_1_01.h5 -r`
+**output:**
 STDOUT: 
 ```
 Running with lxml.etree
 Running with single thread
 --- foo_grid-1_step-123.xmf created in 0.657558917999 seconds ---
 ```
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo_grid-1_step-123.xmf` is created
+
+`foo_grid-1_step-123.xmf` is created
 ___
 Using the data from the first wedge for the entire grid and compute auxiliary scalars like E_RMS_[et,et-bar,mt,mt-bar] and Luminosity_[et,et-bar,mt,mt-bar] and use shorter naming convention:
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;bash: `$python write_xml.py foo_123_grid_1_01.h5 -rsa`
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;output: 
+**shell:** `$python write_xml.py foo_123_grid_1_01.h5 -rsa`
+**output:** 
 STDOUT: 
 ```
 Running with lxml.etree
 Running with single thread
---- foo_grid-1_step-123.xmf created in 0.657558917999 seconds ---
+Creating derived values
+Computing E_RMS_[1..4] for slice 1 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 2 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 3 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 4 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 5 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 6 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 7 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 8 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 9 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 10 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 11 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 12 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 13 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 14 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 15 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 16 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 17 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 18 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 19 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 20 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 21 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 22 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 23 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 24 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 25 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 26 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 27 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 28 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 29 from foo_123_grid_1_01.h5
+Computing E_RMS_[1..4] for slice 30 from foo_123_grid_1_01.h5
+Writing E_RMS_0 out to file
+Writing E_RMS_1 out to file
+Writing E_RMS_2 out to file
+Writing E_RMS_3 out to file
+Computing luminosities
+Computing luminosity for species 0:
+    On slice 1 of 30 from foo_123_grid_1_01.h5
+    On slice 2 of 30 from foo_123_grid_1_01.h5
+    On slice 3 of 30 from foo_123_grid_1_01.h5
+    On slice 4 of 30 from foo_123_grid_1_01.h5
+    On slice 5 of 30 from foo_123_grid_1_01.h5
+    On slice 6 of 30 from foo_123_grid_1_01.h5
+    On slice 7 of 30 from foo_123_grid_1_01.h5
+    On slice 8 of 30 from foo_123_grid_1_01.h5
+    On slice 9 of 30 from foo_123_grid_1_01.h5
+    On slice 10 of 30 from foo_123_grid_1_01.h5
+    On slice 11 of 30 from foo_123_grid_1_01.h5
+    On slice 12 of 30 from foo_123_grid_1_01.h5
+    On slice 13 of 30 from foo_123_grid_1_01.h5
+    On slice 14 of 30 from foo_123_grid_1_01.h5
+    On slice 15 of 30 from foo_123_grid_1_01.h5
+    On slice 16 of 30 from foo_123_grid_1_01.h5
+    On slice 17 of 30 from foo_123_grid_1_01.h5
+    On slice 18 of 30 from foo_123_grid_1_01.h5
+    On slice 19 of 30 from foo_123_grid_1_01.h5
+    On slice 20 of 30 from foo_123_grid_1_01.h5
+    On slice 21 of 30 from foo_123_grid_1_01.h5
+    On slice 22 of 30 from foo_123_grid_1_01.h5
+    On slice 23 of 30 from foo_123_grid_1_01.h5
+    On slice 24 of 30 from foo_123_grid_1_01.h5
+    On slice 25 of 30 from foo_123_grid_1_01.h5
+    On slice 26 of 30 from foo_123_grid_1_01.h5
+    On slice 27 of 30 from foo_123_grid_1_01.h5
+    On slice 28 of 30 from foo_123_grid_1_01.h5
+    On slice 29 of 30 from foo_123_grid_1_01.h5
+    On slice 30 of 30 from foo_123_grid_1_01.h5
+Computing luminosity for species 1:
+    On slice 1 of 30 from foo_123_grid_1_01.h5
+    On slice 2 of 30 from foo_123_grid_1_01.h5
+    On slice 3 of 30 from foo_123_grid_1_01.h5
+    On slice 4 of 30 from foo_123_grid_1_01.h5
+    On slice 5 of 30 from foo_123_grid_1_01.h5
+    On slice 6 of 30 from foo_123_grid_1_01.h5
+    On slice 7 of 30 from foo_123_grid_1_01.h5
+    On slice 8 of 30 from foo_123_grid_1_01.h5
+    On slice 9 of 30 from foo_123_grid_1_01.h5
+    On slice 10 of 30 from foo_123_grid_1_01.h5
+    On slice 11 of 30 from foo_123_grid_1_01.h5
+    On slice 12 of 30 from foo_123_grid_1_01.h5
+    On slice 13 of 30 from foo_123_grid_1_01.h5
+    On slice 14 of 30 from foo_123_grid_1_01.h5
+    On slice 15 of 30 from foo_123_grid_1_01.h5
+    On slice 16 of 30 from foo_123_grid_1_01.h5
+    On slice 17 of 30 from foo_123_grid_1_01.h5
+    On slice 18 of 30 from foo_123_grid_1_01.h5
+    On slice 19 of 30 from foo_123_grid_1_01.h5
+    On slice 20 of 30 from foo_123_grid_1_01.h5
+    On slice 21 of 30 from foo_123_grid_1_01.h5
+    On slice 22 of 30 from foo_123_grid_1_01.h5
+    On slice 23 of 30 from foo_123_grid_1_01.h5
+    On slice 24 of 30 from foo_123_grid_1_01.h5
+    On slice 25 of 30 from foo_123_grid_1_01.h5
+    On slice 26 of 30 from foo_123_grid_1_01.h5
+    On slice 27 of 30 from foo_123_grid_1_01.h5
+    On slice 28 of 30 from foo_123_grid_1_01.h5
+    On slice 29 of 30 from foo_123_grid_1_01.h5
+    On slice 30 of 30 from foo_123_grid_1_01.h5
+Computing luminosity for species 2:
+    On slice 1 of 30 from foo_123_grid_1_01.h5
+    On slice 2 of 30 from foo_123_grid_1_01.h5
+    On slice 3 of 30 from foo_123_grid_1_01.h5
+    On slice 4 of 30 from foo_123_grid_1_01.h5
+    On slice 5 of 30 from foo_123_grid_1_01.h5
+    On slice 6 of 30 from foo_123_grid_1_01.h5
+    On slice 7 of 30 from foo_123_grid_1_01.h5
+    On slice 8 of 30 from foo_123_grid_1_01.h5
+    On slice 9 of 30 from foo_123_grid_1_01.h5
+    On slice 10 of 30 from foo_123_grid_1_01.h5
+    On slice 11 of 30 from foo_123_grid_1_01.h5
+    On slice 12 of 30 from foo_123_grid_1_01.h5
+    On slice 13 of 30 from foo_123_grid_1_01.h5
+    On slice 14 of 30 from foo_123_grid_1_01.h5
+    On slice 15 of 30 from foo_123_grid_1_01.h5
+    On slice 16 of 30 from foo_123_grid_1_01.h5
+    On slice 17 of 30 from foo_123_grid_1_01.h5
+    On slice 18 of 30 from foo_123_grid_1_01.h5
+    On slice 19 of 30 from foo_123_grid_1_01.h5
+    On slice 20 of 30 from foo_123_grid_1_01.h5
+    On slice 21 of 30 from foo_123_grid_1_01.h5
+    On slice 22 of 30 from foo_123_grid_1_01.h5
+    On slice 23 of 30 from foo_123_grid_1_01.h5
+    On slice 24 of 30 from foo_123_grid_1_01.h5
+    On slice 25 of 30 from foo_123_grid_1_01.h5
+    On slice 26 of 30 from foo_123_grid_1_01.h5
+    On slice 27 of 30 from foo_123_grid_1_01.h5
+    On slice 28 of 30 from foo_123_grid_1_01.h5
+    On slice 29 of 30 from foo_123_grid_1_01.h5
+    On slice 30 of 30 from foo_123_grid_1_01.h5
+Computing luminosity for species 3:
+    On slice 1 of 30 from foo_123_grid_1_01.h5
+    On slice 2 of 30 from foo_123_grid_1_01.h5
+    On slice 3 of 30 from foo_123_grid_1_01.h5
+    On slice 4 of 30 from foo_123_grid_1_01.h5
+    On slice 5 of 30 from foo_123_grid_1_01.h5
+    On slice 6 of 30 from foo_123_grid_1_01.h5
+    On slice 7 of 30 from foo_123_grid_1_01.h5
+    On slice 8 of 30 from foo_123_grid_1_01.h5
+    On slice 9 of 30 from foo_123_grid_1_01.h5
+    On slice 10 of 30 from foo_123_grid_1_01.h5
+    On slice 11 of 30 from foo_123_grid_1_01.h5
+    On slice 12 of 30 from foo_123_grid_1_01.h5
+    On slice 13 of 30 from foo_123_grid_1_01.h5
+    On slice 14 of 30 from foo_123_grid_1_01.h5
+    On slice 15 of 30 from foo_123_grid_1_01.h5
+    On slice 16 of 30 from foo_123_grid_1_01.h5
+    On slice 17 of 30 from foo_123_grid_1_01.h5
+    On slice 18 of 30 from foo_123_grid_1_01.h5
+    On slice 19 of 30 from foo_123_grid_1_01.h5
+    On slice 20 of 30 from foo_123_grid_1_01.h5
+    On slice 21 of 30 from foo_123_grid_1_01.h5
+    On slice 22 of 30 from foo_123_grid_1_01.h5
+    On slice 23 of 30 from foo_123_grid_1_01.h5
+    On slice 24 of 30 from foo_123_grid_1_01.h5
+    On slice 25 of 30 from foo_123_grid_1_01.h5
+    On slice 26 of 30 from foo_123_grid_1_01.h5
+    On slice 27 of 30 from foo_123_grid_1_01.h5
+    On slice 28 of 30 from foo_123_grid_1_01.h5
+    On slice 29 of 30 from foo_123_grid_1_01.h5
+    On slice 30 of 30 from foo_123_grid_1_01.h5
+########################################
+Writing luminosity species 0 to auxilary hdf file
+Writing luminosity species 1 to auxilary hdf file
+Writing luminosity species 2 to auxilary hdf file
+Writing luminosity species 3 to auxilary hdf file
+########################################
+Creating On_grid_mask
+Writing On_grid_mask to auxillary file
+--- foo-1-123.xmf created in 161.676426172 seconds ---
 ```
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo_123_grid_1_aux.h5` is created
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;`foo-1-123.xmf` is created (knows about both `foo_123_grid_1_aux.h5` and `foo_123_grid_1_`[00..N_wedges]`.h5`)
+`foo_123_grid_1_aux.h5` is created.
+`foo-1-123.xmf` is created. (note:`foo-1-123.xmf` knows about both `foo_123_grid_1_aux.h5` and `foo_123_grid_1_`[00..N_wedges]`.h5`)
+ 
+___
+Once these files are created one needs only the the xdmf file in VisIt and it should behave almost as drop-in replacement for Silo. 
 
+# Reducer.py
+TBA 
+(The short story is that it's almost the same in invocation as write_xml.py but it works only on 3d files and slices through the x,y, and z axes to create 3 2D HDF files and an xdmf file to link them together nicely. It also makes the auxiliary scalars and if you're just going to slice the data about one of these plane in VisIt anyway, this is much much faster.)
