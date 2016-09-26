@@ -47,4 +47,4 @@ Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions u
 Other options:
 
 **`--quiet`**
-   This option was created 
+   This option was created so the script can run "headless" and will only output to the stderr data stream in the event of a problem. 
