@@ -30,6 +30,7 @@ if __name__ == '__main__':
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
+	parser.add_argument('--YY','-y',dest='YY',action='store_const',const=True, help='Assume the grid is in a Yin-Yang configuration and the second file is in the same directory')
 	args = parser.parse_args()
 	# share arguments with other module import script
 	try:
@@ -358,8 +359,10 @@ if __name__ == '__main__':
 		hf2.close()
 		hf3.close()
 		######### Module: Auxilary Variables ##############################################################################################################################################################
-		if args.aux:
+		if args.aux and not (args.disable and "abundance" in args.disable):
 			qprint("Creating derived values")
+			extents_str='&Slice_'+con_sp[S_P]+'_extent_theta; &Extent_r;'
+			dims_str=str(dims[2])+" "+str(dims[0])
 			n_groups=hf['radiation']['raddim'][0]
 			n_species=hf['radiation']['raddim'][1]
 			energy_edge=hf['radiation']['unubi'].value
@@ -440,7 +443,7 @@ if __name__ == '__main__':
 			for n,sp in enumerate(['e','e-bar','mt','mt-bar']):
 				qprint("	Writing /Radiation/E_RMS_"+sp+" out to "+con_sp[S_P]+" HDF5 file")
 				reduced_hf[S_P].create_dataset("/radiation/E_RMS_"+sp,data=E_RMS_array[n])
-			del E_RMS_array, results
+			# del E_RMS_array, results
 			# Corresponding xdmf:
 			extents_str="&Slice_"+con_sp[S_P]+"_extent_theta; &Extent_r;"
 			dims_str=str(dims[2])+" "+str(dims[0])
@@ -448,30 +451,37 @@ if __name__ == '__main__':
 				qprint("	Creating "+con_sp[S_P]+"/Radiation/E_RMS_"+str(n)+" xdmf element")
 				radiation_xdmf('E_RMS_'+str(n),'E_RMS_'+str(n),S_P,'/Radiation','/radiation',dims_str,extents_str)
 
-			extents_str=str(extents[1]*2)+" "+str(extents[0])
-			dims_str=str(dims[1]*2)+" "+str(dims[0])
 			# ######## luminosity part ###########
-			# qprint("Computing luminosities")
-			# psi1_e=hf['radiation']['psi1_e']
-			# radius=hf['mesh']['x_ef'].value
-			# agr_e=hf['fluid']['agr_e'].value
-			# cell_area_GRcorrected=4*pi*radius**2/agr_e**4
-			# lumin=np.empty((dims[2],dims[1],dims[0]))
-			# lumin_array=[]
-			# def compute_luminosity(species,sl):
-			# 	j=sl
-			# 	if args.repeat:
-			# 		sl=0
-			# 	temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
-			# 	psi1_e=temp_hf['radiation']['psi1_e']
-			# 	qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
-			# 	br()
-			# 	del temp_hf
-			# 	return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
-			# lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
-			# for species in range(0,n_species):
-			# 	qprint("Computing luminosity for species "+str(species)+":")
-			# 	lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(0,sl) for sl in range(0,n_hyperslabs)))
+			qprint("Computing luminosities")
+			psi1_e=hf['radiation']['psi1_e']
+			radius=hf['mesh']['x_ef'].value
+			agr_e=hf['fluid']['agr_e'].value
+			cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+			lumin=np.empty((n_species,dims[1],dims[0]))
+			def compute_luminosity_z(species,sl):
+				j=sl
+				if args.repeat:
+					sl=0
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+				psi1_e=np.empty((dims[1]/n_hyperslabs,dims[0],n_species,n_groups))
+				psi1_e=temp_hf['radiation']['psi1_e'][:,dims[1]/2,:,:,:]
+				qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+				br()
+				del temp_hf
+				return np.sum(psi1_e[:,:,species,:]*e3de, axis=2)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,1))*(cvel*ecoef*1e-51)
+			lumin_array=np.empty((n_species,dims[2],dims[0]))
+			species=0
+			sl=0
+			br()
+			compute_luminosity_z(species,sl)
+			for sl in range(0,n_hyperslabs):
+					E_RMS_array[:,sl*step:(sl+1)*step,:]=compute_E_RMS_array_z(sl)
+			for species in range(0,n_species):
+				qprint("Computing luminosity for species "+str(species)+":")
+				# lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(0,sl) for sl in range(0,n_hyperslabs)))
+				
+				lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(0,sl) for sl in range(0,n_hyperslabs)))
+
 			# qprint("########################################")
 			# for n,lumin in enumerate(lumin_array):
 			# 	qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
