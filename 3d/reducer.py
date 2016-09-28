@@ -112,22 +112,23 @@ if __name__ == '__main__':
 		# Here we write out mesh variables for each slice and make corresponding xdmf
 		
 		# make variable that the normal parser can easily check for and refer to this script
-		for coord in coords:
-			reduced_hf[coord].create_dataset('is_reduced',data=True)
- 		# X slice mesh:
-		reduced_hf['X'].create_group('/mesh')
-		reduced_hf['X'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
-		y=np.append(hf['mesh']['y_ef'],hf['mesh']['y_ef'].value[1:]+np.pi)
-		reduced_hf['X'].create_dataset('/mesh/y_ef',data=y)
-		# Y slice mesh:
-		reduced_hf['Y'].create_group('/mesh')
-		reduced_hf['Y'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
-		reduced_hf['Y'].create_dataset('/mesh/y_ef',data=y)
-		# del y
-		# Z slice mesh:
-		reduced_hf['Z'].create_group('/mesh')
-		reduced_hf['Z'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
-		reduced_hf['Z'].create_dataset('/mesh/z_ef',data=hf['mesh']['z_ef'].value)
+		if not args.YY:
+			for coord in coords:
+				reduced_hf[coord].create_dataset('is_reduced',data=True)
+	 		# X slice / YZ plane mesh:
+			reduced_hf['X'].create_group('/mesh')
+			reduced_hf['X'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
+			y=np.append(hf['mesh']['y_ef'],hf['mesh']['y_ef'].value[1:]+np.pi)
+			reduced_hf['X'].create_dataset('/mesh/y_ef',data=y)
+			# Y slice / XZ plane mesh:
+			reduced_hf['Y'].create_group('/mesh')
+			reduced_hf['Y'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
+			reduced_hf['Y'].create_dataset('/mesh/y_ef',data=y)
+			# del y
+			# Z slice / XY plane mesh:
+			reduced_hf['Z'].create_group('/mesh')
+			reduced_hf['Z'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
+			reduced_hf['Z'].create_dataset('/mesh/z_ef',data=hf['mesh']['z_ef'].value)
 		# create corresponding xdmf:
 		xdmf = et.Element("Xdmf", Version="2.0")
 		domain = et.SubElement(xdmf,"Domain")
@@ -382,7 +383,7 @@ if __name__ == '__main__':
 			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 			# # initialize variables for parallel loop
 			E_RMS_array=np.empty((n_species,dims[2],dims[0]))
-			def compute_E_RMS_array_z(sl):	
+			def compute_E_RMS_XY_wedge(sl):	
 				sl+=1
 				i=sl
 				if args.repeat:
@@ -396,24 +397,31 @@ if __name__ == '__main__':
 					denominator=np.sum(psi0_c[:,:,n]*e3de,axis=2)
 					row[n][:][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
-			def compute_E_RMS_array_x():	
-				i=n_hyperslabs
+			def compute_E_RMS_array(sl):	
+				if sl=='Y':
+					sl=n_hyperslabs/4
+					slp=3*sl
+				if sl=='X':
+					sl=1
+					slp=n_hyperslabs/2
 				if args.repeat:
 					i=1
 				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-				psi0_c=hf['radiation']['psi0_c'][0,:,:,:]
+				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				psi0_c=temp1_hf['radiation']['psi0_c'][0,:,:,:]
+				temp1_hf.close()
 				row=np.empty((n_species,dims[2]*2,dims[0]))
 				for n in range(0,n_species):
 					numerator=np.sum(psi0_c[:,:,n,:]*e5de,axis=2)
 					denominator=np.sum(psi0_c[:,:,n,:]*e3de,axis=2)
 					row[n][0:dims[2]][:]=np.sqrt(numerator/(denominator+1e-100))
-				psi0_c=hf['radiation']['psi0_c'][0,:,:,:]
+				psi0_c=temp2_hf['radiation']['psi0_c'][0,:,:,:]
 				for n in range(0,n_species):
 					numerator=np.sum(psi0_c[:,:,n,:]*e5de,axis=2)
 					denominator=np.sum(psi0_c[:,:,n,:]*e3de,axis=2)
 					row[n][dims[2]:dims[2]*2][:]=np.sqrt(numerator/(denominator+1e-100))
-				return row.shape
+				return row
 			def radiation_xdmf(xdmf_alias_name,hdf_variable_name,S_P,xdmf_grid,hdf_directory,dims_str,extents_str):
 				# Fix potential directory issue
 				if hdf_directory[0]!='/':
@@ -431,7 +439,7 @@ if __name__ == '__main__':
 			results=[]
 			qprint("Z slice E_RMS:")
 			if num_cores!=1:
-				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array_z)(sl) for sl in range(0,n_hyperslabs))
+				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_XY_wedge)(sl) for sl in range(0,n_hyperslabs))
 				#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 				qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 				E_RMS_array=np.hstack(results)
