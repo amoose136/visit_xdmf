@@ -158,8 +158,27 @@ if __name__ == '__main__':
 			"Dim_r":str(extents[0]+1)
 		}
 		if is_3d:
-			entities['Extent_phi']=Extent_phi
-		# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
+			entities['Extent_phi']=extents[2]
+		# explode filename into list
+		file_directory=''
+		if re.search('.*\/(?!.+\/)',filename):
+			file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
+		if args.prefix:
+			filename_part[0]=args.prefix
+		if args.dir:
+			file_directory = str(args.dir)
+			qprint("Directory set to "+file_directory)
+		if not file_directory.endswith('/') and file_directory != '':
+			file_directory+='/'
+			extension='.xmf'
+		if args.xdmf:
+			extension='.xdmf'
+		if args.shortfilename:
+			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+		else:
+			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		# if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 		processed_suffix='_pro'
 		if filename[-7:-3]!='_pro':
 			processed_suffix='' #temporary fix
@@ -454,34 +473,14 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
-			# explode filename into list
-			file_directory=''
-			if re.search('.*\/(?!.+\/)',filename):
-				file_directory = re.search('.*\/(?!.+\/)',filename).group()
-			filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
-			if args.prefix:
-				filename_part[0]=args.prefix
-			if args.dir:
-				file_directory = str(args.dir)
-				qprint("Directory set to "+file_directory)
-			if not file_directory.endswith('/') and file_directory != '':
-				file_directory+='/'
-			extension='.xmf'
-			if args.xdmf:
-				extension='.xdmf'
-			if args.shortfilename:
-				file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
-			else:
-				file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		
 			f=open(file_out_name,'w')
 			del extension,file_directory
 			# if lxml module loaded use it to write document (fasted, simplest implementation):
-			entities={
-			"h5path":filename[:-5]
-			}
 			entity_str = ''
-			for entity in entities:
-				entity_str+="\n  "+entity
+			for key,value in six.iteritems(entities):
+				entity_str+="\n  <!ENTITY "+key+" \""+value+"\">"
+			entity_str+="\n  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontanious freak out session -->"
 			try:
 				#write to file:
 				f.write(\
@@ -491,7 +490,7 @@ if __name__ == '__main__':
 							pretty_print=True,\
 							xml_declaration=True,\
 							encoding="ASCII",\
-							doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>"\
+							doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>"\
 							)\
 					)\
 				)
@@ -509,7 +508,7 @@ if __name__ == '__main__':
 					t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 					return t
 				# write custom doctype declaration
-				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>\n")
+				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>")
 				f.close()
 				f=open(file_out_name,'a')
 				f.write(prettify(xdmf))
