@@ -105,8 +105,8 @@ if __name__ == '__main__':
 		reduced_hf={}
 		coords=['X','Y','Z']
 		for axis in coords:
-			new_filename[axis]='2D_'+filename_part[0]+['_axis-','-'][short]+con_sp[axis]+['_step-','-'][short]+filename_part[1]+'.h5'
-			reduced_hf[axis]=h5py.File('2D_'+filename_part[0]+['_axis-','-'][short]+con_sp[axis]+['_step-','-'][short]+filename_part[1]+'.h5','w')
+			new_filename[axis]='2D_'+filename_part[0]+['_plane-','-'][short]+con_sp[axis]+['_step-','-'][short]+filename_part[1]+'.h5'
+			reduced_hf[axis]=h5py.File('2D_'+filename_part[0]+['_plane-','-'][short]+con_sp[axis]+['_step-','-'][short]+filename_part[1]+'.h5','w')
 		del axis,short
 		######### Module: Mesh setup ###########
 		# Here we write out mesh variables for each slice and make corresponding xdmf
