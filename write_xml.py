@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
@@ -67,18 +67,20 @@ if __name__ == '__main__':
 	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
 	except ImportError:
 		try:
-			qprint("Trying to run under reloaded modules")
+			qprint("h5py load failed. Trying to run under reloaded modules")
 			try:
 				if not args.norepeat:
 					if socket.gethostname()[:4]=='rhea':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 					if socket.gethostname()[:5]=='titan':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+					else:
+						raise ValueError('aw crap, no known \'module\' command')
 				else:
 					raise ValueError('aw crap, already reloaded and still failed to import something')
 			except:
-				#redo the offending call so the error can display
-				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+				#check for module command
+				sp.call(["module"],shell=True)
 				eprint("Could not import modules")
 				raise ValueError('aw crap')
 			qprint("Finished")
@@ -155,7 +157,8 @@ if __name__ == '__main__':
 		entities={
 			"Extent_r":str(extents[0]),
 			"Extent_theta":str(extents[1]),
-			"Dim_r":str(extents[0]+1)
+			"Dim_r":str(extents[0]+1),
+			"h5path":str(filename[:-5])
 		}
 		if is_3d:
 			entities['Extent_phi']=extents[2]
@@ -169,9 +172,9 @@ if __name__ == '__main__':
 		if args.dir:
 			file_directory = str(args.dir)
 			qprint("Directory set to "+file_directory)
+		extension='.xmf'
 		if not file_directory.endswith('/') and file_directory != '':
 			file_directory+='/'
-			extension='.xmf'
 		if args.xdmf:
 			extension='.xdmf'
 		if args.shortfilename:
@@ -326,7 +329,7 @@ if __name__ == '__main__':
 				unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
 				parent_element=unit_changing_function
 			hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
-			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 			et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
 			
 		et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
@@ -430,7 +433,7 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key('Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+					if not 'Abundance'+'/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
 						et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 						et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
@@ -485,13 +488,15 @@ if __name__ == '__main__':
 				#write to file:
 				f.write(\
 					#remove all the '&amp;' tags that appear due to xml parser and replace with '&' so the aliasing works
-					re.sub(\
-						'&amp;','&',et.tostring(xdmf,\
-							pretty_print=True,\
-							xml_declaration=True,\
-							encoding="ASCII",\
-							doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>"\
-							)\
+					str(\
+						re.sub(\
+							b'&amp;',b'&',et.tostring(xdmf,\
+								pretty_print=True,\
+								xml_declaration=True,\
+								encoding="ASCII",\
+								doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>"\
+								)\
+						)\
 					)\
 				)
 			#other ElementTree writers can use this slower writer that does the same thing:
