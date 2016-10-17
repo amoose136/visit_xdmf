@@ -9,7 +9,7 @@ from __future__ import print_function
 import time, argparse
 from pdb import set_trace as br
 # for variable sharing of arguments with the other import statements:
-import __builtins__
+import __builtin__
 start_time = time.time()
 if __name__ == '__main__':
 	# construct parser
@@ -403,6 +403,8 @@ if __name__ == '__main__':
 					slp=n_hyperslabs/2
 				if args.repeat:
 					i=1
+					sl=1
+					slp=1
 				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
 				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
 				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
@@ -419,6 +421,7 @@ if __name__ == '__main__':
 					denominator=np.sum(psi0_c[:,:,n,:]*e3de,axis=2)
 					row[n][dims[2]:dims[2]*2][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
+			br()
 			def radiation_xdmf(xdmf_alias_name,hdf_variable_name,S_P,xdmf_grid,hdf_directory,dims_str,extents_str):
 				# Fix potential directory issue
 				if hdf_directory[0]!='/':
