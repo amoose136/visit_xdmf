@@ -446,25 +446,49 @@
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="E_RMS_e">
         <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
           <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
-          <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_e</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_e</DataItem>
         </DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="E_RMS_e-bar">
         <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
           <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
-          <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_e-bar</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_e-bar</DataItem>
         </DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="E_RMS_mt">
         <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
           <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
-          <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_mt</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_mt</DataItem>
         </DataItem>
       </Attribute>
       <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="E_RMS_mt-bar">
         <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
           <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
-          <DataItem Dimensions="180 542" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_mt-bar</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/E_RMS_mt-bar</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="Luminosity_e">
+        <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
+          <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/Luminosity_e</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="Luminosity_e-bar">
+        <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
+          <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/Luminosity_e-bar</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="Luminosity_mt">
+        <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
+          <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/Luminosity_mt</DataItem>
+        </DataItem>
+      </Attribute>
+      <Attribute AttributeType="Scalar" Center="Cell" Dimensions="&Slice_XY_extent_theta; &Extent_r;" Name="Luminosity_mt-bar">
+        <DataItem Dimensions="&Slice_XY_extent_theta; &Extent_r;" ItemType="HyperSlab">
+          <DataItem Dimensions="3 2" Format="XML">0 0 1 1 &Slice_XY_extent_theta; &Extent_r;</DataItem>
+          <DataItem Dimensions="180 &Dim_r;" Format="HDF" NumberType="Float" Precision="8">&h5pathZ;:/radiation/Luminosity_mt-bar</DataItem>
         </DataItem>
       </Attribute>
     </Grid>

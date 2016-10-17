@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python3
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
@@ -53,7 +53,7 @@ if __name__ == '__main__':
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 	parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of abundances, hydro, or radiation components')
+	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' and/or \'E_RMS\' components')
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
@@ -67,18 +67,20 @@ if __name__ == '__main__':
 	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
 	except ImportError:
 		try:
-			qprint("Trying to run under reloaded modules")
+			qprint("h5py load failed. Trying to run under reloaded modules")
 			try:
 				if not args.norepeat:
 					if socket.gethostname()[:4]=='rhea':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 					if socket.gethostname()[:5]=='titan':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+					else:
+						raise ValueError('aw crap, no known \'module\' command')
 				else:
 					raise ValueError('aw crap, already reloaded and still failed to import something')
 			except:
-				#redo the offending call so the error can display
-				sp.call(["module unload PE-intel python;module load PE-gnu python python_h5py"],shell=True)
+				#check for module command
+				sp.call(["module"],shell=True)
 				eprint("Could not import modules")
 				raise ValueError('aw crap')
 			qprint("Finished")
@@ -152,8 +154,34 @@ if __name__ == '__main__':
 			is_3d=(not is_2d)
 		n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 		n_elemental_species = hf['abundance']['xn_c'].shape[3]
-
-		# # if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
+		entities={
+			"Extent_r":str(extents[0]),
+			"Extent_theta":str(extents[1]),
+			"Dim_r":str(extents[0]+1),
+			"h5path":str(filename[:-5])
+		}
+		if is_3d:
+			entities['Extent_phi']=extents[2]
+		# explode filename into list
+		file_directory=''
+		if re.search('.*\/(?!.+\/)',filename):
+			file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
+		if args.prefix:
+			filename_part[0]=args.prefix
+		if args.dir:
+			file_directory = str(args.dir)
+			qprint("Directory set to "+file_directory)
+		extension='.xmf'
+		if not file_directory.endswith('/') and file_directory != '':
+			file_directory+='/'
+		if args.xdmf:
+			extension='.xdmf'
+		if args.shortfilename:
+			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+		else:
+			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		# if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 		processed_suffix='_pro'
 		if filename[-7:-3]!='_pro':
 			processed_suffix='' #temporary fix
@@ -175,99 +203,101 @@ if __name__ == '__main__':
 		# compute luminosity auxilary variabes
 		if args.aux:
 			qprint("Creating derived values")
-			n_groups=hf['radiation']['raddim'][0]
-			n_species=hf['radiation']['raddim'][1]
-			energy_edge=hf['radiation']['unubi'].value
-			energy_center=hf['radiation']['unui'].value
-			d_energy=[]
-			for i in range(0,n_groups):
-				d_energy.append(energy_edge[i+1]-energy_edge[i])
-			d_energy=np.array(d_energy)
-			e3de = energy_center**3*d_energy
-			e5de = energy_center**5*d_energy
-			cvel=2.99792458e10
-			pi=3.141592653589793
-			ergmev = 1.602177e-6
-			h = 4.13567e-21
-			ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
-			step=dims[1]/n_hyperslabs
-			#open new auxilary hdf file or overite existing one. 
 			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
-			aux_hf.create_group("/radiation") #or do nothing if exists
-			aux_hf.create_group("/mesh") #or do nothing if exists
-			######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
-			# # initialize variables for parallel loop
-			psi0_c=hf['radiation']['psi0_c'] 
-			def compute_E_RMS_array(sl):	
-				sl+=1
-				i=sl
-				if args.repeat:
-					i=1
-				qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-				psi0_c=temp_hf['radiation']['psi0_c'][:]
-				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
-				for n in range(0,n_species):
-					numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-					denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-					row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
-				return row
-			if num_cores!=1:
-				results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
-				#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-				qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-				E_RMS_array=np.hstack(results)
-			else:
-				E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
-				for sl in range(0,n_hyperslabs):
-					E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
-			for n in range(0,n_species):
-				qprint("Writing E_RMS_"+str(n)+" out to file")
-				aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
-			del E_RMS_array
-			if 'results' in locals():
-				del results
-			
-			# ######## luminosity part ###########
-			qprint("Computing luminosities")
-			psi1_e=hf['radiation']['psi1_e']
-			radius=hf['mesh']['x_ef'].value
-			agr_e=hf['fluid']['agr_e'].value
-			cell_area_GRcorrected=4*pi*radius**2/agr_e**4
-			lumin=np.empty((dims[2],dims[1],dims[0]))
-			lumin_array=[]
-			def compute_luminosity(species,sl):
-				j=sl
-				if args.repeat:
-					sl=0
-				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
-				psi1_e=temp_hf['radiation']['psi1_e']
-				qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
-				del temp_hf
-				return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
-			lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
-			for species in range(0,n_species):
-				qprint("Computing luminosity for species "+str(species)+":")
-				if num_cores!=1:
-					lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
-				else:
-					for sl in range(0,n_hyperslabs):
-						lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
-			qprint("########################################")
-			for n,lumin in enumerate(lumin_array):
-				qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-				aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+			if not args.disable or "radiation" not in args.disable:
+				n_groups=hf['radiation']['raddim'][0]
+				n_species=hf['radiation']['raddim'][1]
+				energy_edge=hf['radiation']['unubi'].value
+				energy_center=hf['radiation']['unui'].value
+				d_energy=[]
+				for i in range(0,n_groups):
+					d_energy.append(energy_edge[i+1]-energy_edge[i])
+				d_energy=np.array(d_energy)
+				e3de = energy_center**3*d_energy
+				e5de = energy_center**5*d_energy
+				cvel=2.99792458e10
+				pi=3.141592653589793
+				ergmev = 1.602177e-6
+				h = 4.13567e-21
+				ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
+				step=dims[1]/n_hyperslabs
+				#open new auxilary hdf file or overite existing one. 
+				
+				aux_hf.create_group("/radiation") #or do nothing if exists
+				######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
+				# # initialize variables for parallel loop
+				if not args.disable or "E_RMS" not in args.disable:
+					psi0_c=hf['radiation']['psi0_c'] 
+					def compute_E_RMS_array(sl):	
+						sl+=1
+						i=sl
+						if args.repeat:
+							i=1
+						qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+						temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+						psi0_c=temp_hf['radiation']['psi0_c'][:]
+						row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+						for n in range(0,n_species):
+							numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
+							denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
+							row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+						return row
+					if num_cores!=1:
+						results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
+						#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+						qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
+						E_RMS_array=np.hstack(results)
+					else:
+						E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
+						for sl in range(0,n_hyperslabs):
+							E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
+					for n in range(0,n_species):
+						qprint("Writing E_RMS_"+str(n)+" out to file")
+						aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
+					del E_RMS_array
+					if 'results' in locals():
+						del results
+				# ######## luminosity part ###########
+				if not args.disable or "luminosity" not in args.disable:
+					qprint("Computing luminosities")
+					psi1_e=hf['radiation']['psi1_e']
+					radius=hf['mesh']['x_ef'].value
+					agr_e=hf['fluid']['agr_e'].value
+					cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+					lumin=np.empty((dims[2],dims[1],dims[0]))
+					lumin_array=[]
+					def compute_luminosity(species,sl):
+						j=sl
+						if args.repeat:
+							sl=0
+						temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+						psi1_e=temp_hf['radiation']['psi1_e']
+						qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+						del temp_hf
+						return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
+					lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
+					for species in range(0,n_species):
+						qprint("Computing luminosity for species "+str(species)+":")
+						if num_cores!=1:
+							lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
+						else:
+							for sl in range(0,n_hyperslabs):
+								lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
+					qprint("########################################")
+					for n,lumin in enumerate(lumin_array):
+						qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+						aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
 			# now stack mask for YY grid:
 			qprint("########################################")
 			qprint("Creating On_grid_mask")
+			aux_hf.create_group("/mesh") #or do nothing if exists
 			mask_slice = hf['mesh']['ongrid_mask'].value
 			mask = np.dstack( mask_slice for i in range(0,extents[0]))
 			del mask_slice
 			qprint("Writing On_grid_mask to auxillary file")
 			aux_hf.create_dataset("/mesh/mask",data=mask)
-			
 			aux_hf.close()
-			# del aux_hf,lumin_array,lumin,mask
+			del aux_hf
 		############################################################################################################################################################################################
 		dimstr_sub = str(dims[1])+" "+str(dims[0])
 		extents_sub = str(extents[1])+" "+str(extents[0])
@@ -299,7 +329,7 @@ if __name__ == '__main__':
 				unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
 				parent_element=unit_changing_function
 			hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
-			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text="0 1 "+str(extents[n]+1)
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 			et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
 			
 		et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
@@ -403,7 +433,7 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key('Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+					if not 'Abundance'+'/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
 						et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 						et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
@@ -446,45 +476,27 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
-			# explode filename into list
-			file_directory=''
-			if re.search('.*\/(?!.+\/)',filename):
-				file_directory = re.search('.*\/(?!.+\/)',filename).group()
-			filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
-			if args.prefix:
-				filename_part[0]=args.prefix
-			if args.dir:
-				file_directory = str(args.dir)
-				qprint("Directory set to "+file_directory)
-			if not file_directory.endswith('/') and file_directory != '':
-				file_directory+='/'
-			extension='.xmf'
-			if args.xdmf:
-				extension='.xdmf'
-			if args.shortfilename:
-				file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
-			else:
-				file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		
 			f=open(file_out_name,'w')
 			del extension,file_directory
 			# if lxml module loaded use it to write document (fasted, simplest implementation):
-			entities={
-			"h5path":filename[:-5]
-			}
 			entity_str = ''
-			for entity in entities:
-				entity_str+="\n  "+entity
+			for key,value in six.iteritems(entities):
+				entity_str+="\n  <!ENTITY "+key+" \""+value+"\">"
+			entity_str+="\n  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontanious freak out session -->"
 			try:
 				#write to file:
 				f.write(\
 					#remove all the '&amp;' tags that appear due to xml parser and replace with '&' so the aliasing works
-					re.sub(\
-						'&amp;','&',et.tostring(xdmf,\
-							pretty_print=True,\
-							xml_declaration=True,\
-							encoding="ASCII",\
-							doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>"\
-							)\
+					str(\
+						re.sub(\
+							b'&amp;',b'&',et.tostring(xdmf,\
+								pretty_print=True,\
+								xml_declaration=True,\
+								encoding="ASCII",\
+								doctype="<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>"\
+								)\
+						)\
 					)\
 				)
 			#other ElementTree writers can use this slower writer that does the same thing:
@@ -501,7 +513,7 @@ if __name__ == '__main__':
 					t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 					return t
 				# write custom doctype declaration
-				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" [\n  <!ENTITY h5path \""+re.sub("\d\d\.h5","",re.sub("\d\d_pro\.h5",'',filename))+"\">\n]>\n")
+				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>")
 				f.close()
 				f=open(file_out_name,'a')
 				f.write(prettify(xdmf))
