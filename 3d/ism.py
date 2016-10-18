@@ -1,8 +1,8 @@
 from __future__ import print_function
 # global sys, os, math, socket, argparse, re, sp, np, br, mp, h5py, six, et
 try:
-	import __builtins__
-	args=__builtins__.args
+	import builtins
+	args=builtins.args
 except: 
 	import __builtin__
 	args=__builtin__.args

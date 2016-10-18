@@ -9,7 +9,12 @@ from __future__ import print_function
 import time, argparse
 from pdb import set_trace as br
 # for variable sharing of arguments with the other import statements:
-import __builtin__
+try:
+	# python 3
+	import builtins
+except:
+	# python 2
+	import __builtin__
 start_time = time.time()
 if __name__ == '__main__':
 	# construct parser
@@ -31,7 +36,7 @@ if __name__ == '__main__':
 	args = parser.parse_args()
 	# share arguments with other module import script
 	try:
-		__builtins__.args=args
+		builtins.args=args
 	except:
 		__builtin__.args=args
 	from ism import * #This notation is generally frowned upon but it is the cleanest way to do this here and should be safe in this instance
@@ -205,7 +210,7 @@ if __name__ == '__main__':
 					i=sl
 					if args.repeat:
 						i=1
-					temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+					temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
 					scalar_quantity=np.vstack((scalar_quantity,temp_hf['fluid'][storage_names[name]][:,dims[1]/2,:]))
 				reduced_hf[S_P].create_dataset('/fluid/'+storage_names[name],data=scalar_quantity)
 				at = et.SubElement(grid[con_sp[S_P]+'/Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
@@ -221,7 +226,7 @@ if __name__ == '__main__':
 			i=sl
 			if args.repeat:
 				i=1
-			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
 			scalar_quantity=np.vstack((scalar_quantity,temp_hf['abundance']['nse_c'][:,dims[1]/2,:]))
 		reduced_hf[S_P].create_dataset('/abundance/nse_flag',data=scalar_quantity)
 		et.SubElement(hyperslab,"DataItem",Dimensions=re.sub(r'[^\w\ ]','',str(scalar_quantity.shape)),NumberType="Int",Format="HDF").text = "&h5path"+S_P+";:/abundance/nse_flag"
@@ -231,7 +236,7 @@ if __name__ == '__main__':
 			i=sl
 			if args.repeat:
 				i=1
-			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+			temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
 			scalar_quantity=np.vstack((scalar_quantity,temp_hf['abundance']['xn_c'][:,dims[1]/2,:]))
 		reduced_hf[S_P].create_dataset('/abundance/xn_c',data=scalar_quantity)
 		species_names=hf['abundance']['a_name'].value
@@ -242,7 +247,7 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key(S_P+'Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+					if not S_P+'Abundance'+'/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid[con_sp[S_P]+'/Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=con_sp[S_P]+'/Abundance'+'/'+element_name,GridType="Uniform")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Topology[1]")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Geometry[1]")
@@ -262,7 +267,7 @@ if __name__ == '__main__':
 		i=n_hyperslabs/2
 		if args.repeat:
 			i=1
-		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		hf2=h5py.File(re.sub("\d\d\.h5",str(format(int(i),'02d'))+'.h5',filename),'r')
 		#	For hydro:
 		if not args.disable or 'hydro' not in args.disable:
 			for name in storage_names:
@@ -292,7 +297,7 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key(con_sp[S_P]+'/Abundance'+'/'+element_name): #If the grid for that element doesn't already exist, create it 
+					if not con_sp[S_P]+'/Abundance'+'/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid[con_sp[S_P]+'/Abundance/'+element_name]=et.SubElement(domain,"Grid",Name=con_sp[S_P]+'/Abundance/'+element_name,GridType="Uniform")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Topology[1]")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Geometry[1]")
@@ -309,12 +314,12 @@ if __name__ == '__main__':
 		i=n_hyperslabs/4
 		if args.repeat:
 			i=1
-		hf2=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		hf2=h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',filename),'r')
 		reduced_hf[S_P].create_group('/fluid')
 		i=n_hyperslabs*3/4
 		if args.repeat:
 			i=1
-		hf3=h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',filename),'r')
+		hf3=h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',filename),'r')
 		# for Hydro:
 		if not args.disable or 'hydro' not in args.disable:
 			for name in storage_names:
@@ -344,7 +349,7 @@ if __name__ == '__main__':
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=element_name+re.sub('\D','',name) #find the transition between elements name and number
-					if not grid.has_key(con_sp[S_P]+'/Abundance/'+element_name): #If the grid for that element doesn't already exist, create it 
+					if not con_sp[S_P]+'/Abundance/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid[con_sp[S_P]+'/Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name=con_sp[S_P]+'/Abundance/'+element_name,GridType="Uniform")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Topology[1]")
 						et.SubElement(grid[con_sp[S_P]+'/Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[@Name='"+con_sp[S_P]+"/Abundance']/Geometry[1]")
@@ -385,8 +390,8 @@ if __name__ == '__main__':
 				i=sl
 				if args.repeat:
 					i=1
-				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)))
+				temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
 				psi0_c=temp_hf['radiation']['psi0_c'][:,dims[1]/2,:,:]
 				row=np.empty((n_species,dims[2]/n_hyperslabs,dims[0]))
 				for n in range(0,n_species):
@@ -394,6 +399,7 @@ if __name__ == '__main__':
 					denominator=np.sum(psi0_c[:,:,n]*e3de,axis=2)
 					row[n][:][:]=np.sqrt(numerator/(denominator+1e-100))
 				return row
+			sl='Y'
 			def compute_E_RMS_array(sl):	
 				if sl=='Y':
 					sl=n_hyperslabs/4
@@ -405,9 +411,10 @@ if __name__ == '__main__':
 					i=1
 					sl=1
 					slp=1
-				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)))
+				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
+				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
+				br()
 				psi0_c=temp1_hf['radiation']['psi0_c'][0,:,:,:]
 				temp1_hf.close()
 				row=np.empty((n_species,dims[2]*2,dims[0]))
