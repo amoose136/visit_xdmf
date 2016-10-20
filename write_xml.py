@@ -1,4 +1,4 @@
-#!/usr/bin/env python3 (or python)
+#!/usr/bin/env python
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
