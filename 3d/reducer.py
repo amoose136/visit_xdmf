@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 (or python)
 #  ______   ______  _____    _    _   ______  ______  ______  
 # | |  | \ | |     | | \ \  | |  | | | |     | |     | |  | \ 
 # | |__| | | |---- | |  | | | |  | | | |     | |---- | |__| | 
@@ -401,20 +401,20 @@ if __name__ == '__main__':
 				return row
 			sl='Y'
 			def compute_E_RMS_array(sl):	
-				if sl=='Y':
+				if sl=='X':
 					sl=n_hyperslabs/4
 					slp=3*sl
-				if sl=='X':
+				if sl=='Y':
 					sl=1
 					slp=n_hyperslabs/2
 				if args.repeat:
 					i=1
+					qprint('sl='+str(sl))
+					qprint('slp='+str(slp))
 					sl=1
 					slp=1
-				qprint("	Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(int(i), '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)))
-				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
-				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(int(i), '02d'))+'_pro.h5',filename)),'r')
-				br()
+				temp1_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl, '02d'))+'_pro.h5',filename)),'r')
+				temp2_hf= h5py.File(re.sub("\d\d\.h5",str(format(slp, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(slp, '02d'))+'_pro.h5',filename)),'r')
 				psi0_c=temp1_hf['radiation']['psi0_c'][0,:,:,:]
 				temp1_hf.close()
 				row=np.empty((n_species,dims[2]*2,dims[0]))

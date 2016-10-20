@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python3 (or python)
 from __future__ import print_function
 # For diagnostics, time the execution of the code
 import time
@@ -57,6 +57,7 @@ if __name__ == '__main__':
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
+	parser.add_argument('--reduce',dest='reduce',action='store_const',const=True, help='Also copy over the reduced data to the auxilary file')
 	args=parser.parse_args()
 	#End Parser construction
 	#####################################################################################################################################################################################################
@@ -198,12 +199,19 @@ if __name__ == '__main__':
 			else:
 				eprint("Error: slices must not be more than the number of wedges")
 				sys.exit()
-
 		############################################################################################################################################################################################
 		# compute luminosity auxilary variabes
+		if args.aux or args.reduce:
+			qprint("Creating auxillary file")
+			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
+			if args.reduce:
+				def functioncall(name):
+					if name[:5]=='mesh/':
+						print(name)
+						hf[name].shape
+				br()
 		if args.aux:
 			qprint("Creating derived values")
-			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
 			if not args.disable or "radiation" not in args.disable:
 				n_groups=hf['radiation']['raddim'][0]
 				n_species=hf['radiation']['raddim'][1]
