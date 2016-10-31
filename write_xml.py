@@ -134,6 +134,7 @@ if __name__ == '__main__':
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
+	br()
 	for filename in args.files:
 		hf = h5py.File(filename,'r')
 		dims=[]
@@ -204,12 +205,27 @@ if __name__ == '__main__':
 		if args.aux or args.reduce:
 			qprint("Creating auxillary file")
 			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
+			# prune info
 			if args.reduce:
-				def functioncall(name):
-					if name[:5]=='mesh/':
-						print(name)
-						hf[name].shape
-				br()
+				def copygroup(group):
+					br()
+					sliced_quantities=[
+					'abundance/*',
+					'',
+					'',
+					]
+					aux_hf.create_group(group[0])
+					if slices>1:
+						for item in hf[group[0]]:
+							aux_hf.copy(group[0]+'/'+item,hf[group[0]][item])
+							# if item in sliced_values:
+							# 	for i in range(1,slices):
+							# 		temp_hf = h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+
+
+				for group in hf.items():
+					copygroup(group)
+			
 		if args.aux:
 			qprint("Creating derived values")
 			if not args.disable or "radiation" not in args.disable:
