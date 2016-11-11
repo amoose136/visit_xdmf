@@ -1,6 +1,11 @@
 <?xml version='1.0' encoding='ASCII'?>
 <!DOCTYPE Xdmf SYSTEM "Xdmf.dtd" [
+  <!ENTITY Extent_phi "180">
+  <!ENTITY Dim_r "541">
+  <!ENTITY Extent_theta "180">
   <!ENTITY h5path "chimera_003800000_grid_1_">
+  <!ENTITY Extent_r "540">
+  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontanious freak out session -->
 ]>
 <Xdmf Version="2.0">
   <Domain>

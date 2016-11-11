@@ -134,8 +134,12 @@ if __name__ == '__main__':
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
-	br()
+	unique_set=set()
 	for filename in args.files:
+		unique_set.add(filename[:-5]+'01.h5')
+	if len(unique_set)!=len(args.files):
+		qprint('Warning: redundant files databases found and ignored \n\tOne or more foo_01.h5 and foo_0\d.h5 found in filename list')
+	for filename in unique_set:
 		hf = h5py.File(filename,'r')
 		dims=[]
 		for dim in hf['mesh']['array_dimensions']: #full dimensions of mesh
@@ -500,13 +504,12 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
-		
 			f=open(file_out_name,'w')
 			del extension,file_directory
 			# if lxml module loaded use it to write document (fasted, simplest implementation):
 			entity_str = ''
 			for key,value in six.iteritems(entities):
-				entity_str+="\n  <!ENTITY "+key+" \""+value+"\">"
+				entity_str+="\n  <!ENTITY "+key+" \""+str(value)+"\">"
 			entity_str+="\n  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontanious freak out session -->"
 			try:
 				#write to file:
@@ -523,7 +526,7 @@ if __name__ == '__main__':
 						)\
 					)\
 				)
-			#other ElementTree writers can use this slower writer that does the same thing:
+				#other ElementTree writers can use this slower writer that does the same thing:
 			except:
 				f.close()
 				import xml.etree.cElementTree as et
