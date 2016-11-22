@@ -43,7 +43,12 @@ if __name__ == '__main__':
 	############################################################################################################################################################################################
 	# On with bulk of code
 	old_time=start_time # for speed diagnostics
+	unique_set=set()
 	for filename in args.files:
+		unique_set.add(filename[:-5]+'01.h5')
+	if len(unique_set)!=len(args.files):
+		qprint('Warning: redundant files databases found and ignored \n\tOne or more foo_01.h5 and foo_0\d.h5 found in filename list')
+	for filename in unique_set:
 		# if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 		processed_suffix='_pro'
 		if filename[-7:-3]!='_pro':
