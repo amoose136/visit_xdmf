@@ -20,7 +20,8 @@ def qprint(*arg,**kwargs):
 		print(*arg,**kwargs)
 # For ORNL
 if socket.gethostname()[:4]=='rhea':
-	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
+	# sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
+	sys.path.append('./lib/python2.7/site-packages') #added for the assumption that script is called from base directory
 	sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
 if socket.gethostname()[:5]=='titan':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
