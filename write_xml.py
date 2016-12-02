@@ -282,7 +282,7 @@ if __name__ == '__main__':
 							E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
 					for n in range(0,n_species):
 						qprint("Writing E_RMS_"+str(n)+" out to file")
-						aux_hf.create_dataset("/radiation/E_RMS_"+str(n),data=E_RMS_array[n])
+						aux_hf.create_dataset("/radiation/E_RMS_"+['e','e-bar','mt','mt-bar'][n],data=E_RMS_array[n])
 					del E_RMS_array
 					if 'results' in locals():
 						del results
@@ -315,7 +315,7 @@ if __name__ == '__main__':
 					qprint("########################################")
 					for n,lumin in enumerate(lumin_array):
 						qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-						aux_hf.create_dataset("/radiation/Luminosity_"+str(n),data=lumin)
+						aux_hf.create_dataset("/radiation/Luminosity_"+['e','e-bar','mt','mt-bar'][n],data=lumin)
 			# now stack mask for YY grid:
 			qprint("########################################")
 			qprint("Creating On_grid_mask")
