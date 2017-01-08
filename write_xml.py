@@ -43,6 +43,8 @@ if __name__ == '__main__':
 	# 	sys.exit()
 	############################################################################################################################################################################################
 	# Contstruct Parser:
+	def lowers(strs): #fybctuib checker to make text case insensitive
+		return str(strs).lower()
 	parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera hdf5 files")
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
@@ -54,7 +56,7 @@ if __name__ == '__main__':
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 	parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=str, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' and/or \'E_RMS\' components')
+	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' and/or \'E_RMS\' components')
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
@@ -188,16 +190,9 @@ if __name__ == '__main__':
 			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
 		else:
 			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
-		# if input file doesn't have _pro suffix, rename input files to have this suffix. Later will write data if it is missing.
 		processed_suffix='_pro'
 		if filename[-7:-3]!='_pro':
 			processed_suffix='' #temporary fix
-		# 	old_filename=filename
-		# 	filename=filename[0:-3]+'_pro.h5'
-		# 	os.rename(old_filename,filename)
-			# if not args.quiet:
-				# print(old_filename+" renamed to "+filename+".")
-				# print(Processed data added to h5 file)
 		slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
 		if args.slices:
 			if not args.slices>slices:
@@ -226,14 +221,13 @@ if __name__ == '__main__':
 							# if item in sliced_values:
 							# 	for i in range(1,slices):
 							# 		temp_hf = h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-
-
 				for group in hf.items():
 					copygroup(group)
-			
 		if args.aux:
-			qprint("Creating derived values")
-			if not args.disable or "radiation" not in args.disable:
+			if args.disable and "radiation" in args.disable:
+				eprint("!	Derived value creation (besides ongrid_mask) overridden by `--disable radiation` flag")
+			else:
+				qprint("Creating derived values")
 				n_groups=hf['radiation']['raddim'][0]
 				n_species=hf['radiation']['raddim'][1]
 				energy_edge=hf['radiation']['unubi'].value
@@ -307,7 +301,7 @@ if __name__ == '__main__':
 					lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
 					for species in range(0,n_species):
 						qprint("Computing luminosity for species "+str(species)+":")
-						if num_cores!=1:
+						if num_cores!=1 and n_hyperslabs>1:
 							lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
 						else:
 							for sl in range(0,n_hyperslabs):
@@ -328,6 +322,7 @@ if __name__ == '__main__':
 			aux_hf.close()
 			del aux_hf
 		############################################################################################################################################################################################
+		#Begin other part
 		dimstr_sub = str(dims[1])+" "+str(dims[0])
 		extents_sub = str(extents[1])+" "+str(extents[0])
 		if not is_2d:
@@ -347,25 +342,32 @@ if __name__ == '__main__':
 				'Abundance':et.SubElement(domain,"Grid",Name="Abundance"),
 				'Radiation':et.SubElement(domain,"Grid",Name="Radiation"),
 				'Mesh':et.SubElement(domain,"Grid",Name="Mesh")}
-		et.SubElement(grid['Hydro'],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
-		geometry = et.SubElement(grid['Hydro'],"Geometry",GeometryType=geom_type)
-		coords=["x_ef","y_ef","z_ef"]
-		if is_2d:
-			del coords[2]
-		for n,coord_name in enumerate(coords):
-			parent_element=geometry
-			if coord_name=='x_ef':
-				unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
-				parent_element=unit_changing_function
-			hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
-			et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
-			et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
-			
-		et.SubElement(grid['Hydro'],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+		if args.disable:
+			for name in args.disable:
+				if name.capitalize() in grid:
+					domain.remove(grid[name.capitalize()])
+					del grid[name.capitalize()]
+		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
 		for name in grid:
-			if name!='Hydro':
-				et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-				et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
+			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
+			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
+			coords=["x_ef","y_ef","z_ef"]
+			if is_2d:
+				del coords[2]
+			for n,coord_name in enumerate(coords):
+				parent_element=geometry
+				if coord_name=='x_ef':
+					unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
+					parent_element=unit_changing_function
+				hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
+				et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
+				
+			et.SubElement(grid[name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+		# for name in grid:
+		# 	if name!='Hydro':
+		# 		et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+		# 		et.SubElement(grid[name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 
 		############################################################################################################################################################################################
 		# The following functions are helpers to create dimensions strings and "JOIN($0; $1; $2 .... $N<=9)" strings for the various hyperslabs and nested join functions
@@ -388,9 +390,10 @@ if __name__ == '__main__':
 			return str(dims[2]/n_hyperslabs*m)+" "+str(extents[1])+" "+str(extents[0])
 		############################################################################################################################################################################################
 		# Loop through all standard scalars in "Hydro" grid
-		at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-		et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;aux.h5:/mesh/mask"
-		if not args.disable or "hydro" not in args.disable:
+		if 'Mesh' in grid:
+			at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;aux.h5:/mesh/mask"
+		if 'Hydro' in grid:
 			# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
 			storage_names = { 
 				"Entropy":"entropy",
@@ -432,40 +435,56 @@ if __name__ == '__main__':
 						n+=1
 		############################################################################################################################################################################################
 		# Abundance part:
-		at = et.SubElement(grid['Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-		hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
-		et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-		dim_nse=hf['abundance']['nse_c'].shape
-		dim_nse_str=str(dim_nse[0])+' '+str(dim_nse[1])+' '+str(dim_nse[2])
-		if is_3d:
-			superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=str(dim_nse[0]*slices)+' '+str(dim_nse[1])+' '+str(dim_nse[2]))
-		n=1
-		for m in range(0, int((slices-1)/10)+1):
+		if 'Abundance' in grid:
+			at = et.SubElement(grid['Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
+			hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
+			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
+			dim_nse=hf['abundance']['nse_c'].shape
+			dim_nse_str=str(dim_nse[0])+' '+str(dim_nse[1])+' '+str(dim_nse[2])
 			if is_3d:
-				fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m),10])),Dimensions=str(dim_nse[0]*[slices%10,10][slices-m*10>=10])+" "+str(dim_nse[1])+" "+str(dim_nse[2]))
-			for i in range(0,min(slices-m*10,10)):
-				return_element=hyperslab
-				if 'fun' in globals():
-					return_element=fun
-				if args.repeat:
-					et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/nse_c"
-				else:
-					et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/nse_c"
-				n+=1
-		del dim_nse,dim_nse_str
-
-		species_names=hf['abundance']['a_name'].value
-		if n_elemental_species-1==species_names.shape[0]:
-			species_names=np.append(species_names,'aux')
-		if not args.disable or "abundance" not in args.disable:
+				superfun = et.SubElement(hyperslab,"DataItem",ItemType="Function", Function=function_str(int((slices-1)/10)+1),Dimensions=str(dim_nse[0]*slices)+' '+str(dim_nse[1])+' '+str(dim_nse[2]))
+			n=1
+			for m in range(0, int((slices-1)/10)+1):
+				if is_3d:
+					fun = et.SubElement(superfun,"DataItem",ItemType="Function", Function=function_str(min([(slices-m),10])),Dimensions=str(dim_nse[0]*[slices%10,10][slices-m*10>=10])+" "+str(dim_nse[1])+" "+str(dim_nse[2]))
+				for i in range(0,min(slices-m*10,10)):
+					return_element=hyperslab
+					if 'fun' in globals():
+						return_element=fun
+					if args.repeat:
+						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/nse_c"
+					else:
+						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/nse_c"
+					n+=1
+			del dim_nse,dim_nse_str
+			species_names=hf['abundance']['a_name'].value
+			if n_elemental_species-1==species_names.shape[0]:
+				species_names=np.append(species_names,'aux')
 			for el,name in enumerate(species_names):
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=re.sub('\D','',name) #find the transition between elements name and number
 					if not 'Abundance'+'/'+element_name in grid: #If the grid for that element doesn't already exist, create it 
 						grid['Abundance'+'/'+element_name]=et.SubElement(domain,"Grid",Name='Abundance'+'/'+element_name,GridType="Uniform")
-						et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-						et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
+						#everything between this line and the next comment could be replaced if the xdmf python library worked with references
+						et.SubElement(grid['Abundance'+'/'+element_name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
+						geometry = et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",GeometryType=geom_type)
+						coords=["x_ef","y_ef","z_ef"]
+						if is_2d:
+							del coords[2]
+						for n,coord_name in enumerate(coords):
+							parent_element=geometry
+							if coord_name=='x_ef':
+								unit_changing_function = et.SubElement(geometry,"DataItem",Dimensions=str(extents[n]+1),ItemType="Function",Function="$0/100000")
+								parent_element=unit_changing_function
+							hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
+							et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
+							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
+							
+						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+						# The next two lines could replace the above if the python library worked with references
+						# et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+						# et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 					attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				else:
 					attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
@@ -488,7 +507,7 @@ if __name__ == '__main__':
 						n+=1
 		############################################################################################################################################################################################
 		##Create luminosity and E_RMS xdmf
-		if not args.disable or "radiation" not in args.disable:
+		if 'Radiation' in grid:
 			n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
 			for sp in ['e','e-bar','mt','mt-bar']:
 				# E_RMS_[sp]:
