@@ -249,7 +249,7 @@ if __name__ == '__main__':
 				aux_hf.create_group("/radiation") #or do nothing if exists
 				######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 				# # initialize variables for parallel loop
-				if not args.disable or "E_RMS" not in args.disable:
+				if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
 					psi0_c=hf['radiation']['psi0_c'] 
 					def compute_E_RMS_array(sl):	
 						sl+=1
@@ -281,7 +281,7 @@ if __name__ == '__main__':
 					if 'results' in locals():
 						del results
 				# ######## luminosity part ###########
-				if not args.disable or "luminosity" not in args.disable:
+				if not args.disable or ("luminosity" not in args.disable and "radiation" not in args.disable):
 					qprint("Computing luminosities")
 					psi1_e=hf['radiation']['psi1_e']
 					radius=hf['mesh']['x_ef'].value
@@ -347,6 +347,9 @@ if __name__ == '__main__':
 				if name.capitalize() in grid:
 					domain.remove(grid[name.capitalize()])
 					del grid[name.capitalize()]
+		if not args.aux:
+			domain.remove(grid['Radiation'])
+			del grid['Radiation']
 		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
