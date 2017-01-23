@@ -45,7 +45,7 @@ if __name__ == '__main__':
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
 	parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' and/or \'E_RMS\' components')
+	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' AND/OR \'E_RMS\' components')
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
@@ -179,9 +179,6 @@ if __name__ == '__main__':
 			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
 		else:
 			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
-		processed_suffix='_pro'
-		if filename[-7:-3]!='_pro':
-			processed_suffix='' #temporary fix
 		slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
 		if args.slices:
 			if not args.slices>slices:
@@ -190,125 +187,151 @@ if __name__ == '__main__':
 				eprint("Error: slices must not be more than the number of wedges")
 				sys.exit()
 		############################################################################################################################################################################################
+		# hydro_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
+		hydro_names = { 
+			"Entropy":"entropy",
+			"v_radial":"u_c",
+			"v_theta":"v_c",
+			"v_phi":"w_c",
+			"BruntViasala_freq":"wBVMD",
+			"Electron_fraction":"ye_c",
+			"Gravity_phi":"grav_x_c",
+			"Gravity_r":"grav_y_c",
+			"Gravity_theta":"grav_z_c",
+			"Lepton_fraction":"ylep",
+			"Mach_number":"v_csound",
+			"Neutrino_Heating_rate":"dudt_nu",
+			"Nuclear_Heating_rate":"dudt_nuc",
+			"Pressure":"press",
+			"Temperature":"t_c",
+			# "mask":"",#computed quantity to be added later
+			"Density":"rho_c"
+		}
 		# compute luminosity auxilary variabes
 		if args.aux or args.reduce:
-			qprint("Creating auxillary file")
-			aux_hf=h5py.File(re.sub("\d\d\.h5",'aux.h5',re.sub("\d\d_pro\.h5",'aux_pro.h5',filename)),'w')
+			qprint('Creating auxillary file')
+			aux_hf=h5py.File(re.sub('\d\d\.h5','aux.h5',re.sub('\d\d_pro\.h5','aux_pro.h5',filename)),'w')
 			# prune info
 			if args.reduce:
 				def copygroup(group):
-					br()
-					sliced_quantities=[
-					'abundance/*',
-					'',
-					'',
-					]
 					aux_hf.create_group(group[0])
-					if slices>1:
-						for item in hf[group[0]]:
-							aux_hf.copy(group[0]+'/'+item,hf[group[0]][item])
+					for item in group[1].items():
+						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name']:
+							qprint('\tCopying from: '+hf.filename+':/'+group[0]+'/'+item[0]+'\n\t\tTo: '+aux_hf.filename+':/'+group[0]+'/'+item[0])
+							aux_hf[group[0]].create_dataset(item[0],data=item[1].value)
+					# 	for item in hf[group[0]]:
+					# 		aux_hf.copy(group[0]+'/'+item,hf[group[0]][item])
 							# if item in sliced_values:
 							# 	for i in range(1,slices):
 							# 		temp_hf = h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+					
 				for group in hf.items():
-					copygroup(group)
-		if args.aux:
-			if args.disable and "radiation" in args.disable:
-				eprint("!	Derived value creation (besides ongrid_mask) overridden by `--disable radiation` flag")
-			else:
-				qprint("Creating derived values")
-				n_groups=hf['radiation']['raddim'][0]
-				n_species=hf['radiation']['raddim'][1]
-				energy_edge=hf['radiation']['unubi'].value
-				energy_center=hf['radiation']['unui'].value
-				d_energy=[]
-				for i in range(0,n_groups):
-					d_energy.append(energy_edge[i+1]-energy_edge[i])
-				d_energy=np.array(d_energy)
-				e3de = energy_center**3*d_energy
-				e5de = energy_center**5*d_energy
-				cvel=2.99792458e10
-				pi=3.141592653589793
-				ergmev = 1.602177e-6
-				h = 4.13567e-21
-				ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
-				step=dims[1]/n_hyperslabs
-				#open new auxilary hdf file or overite existing one. 
-				
-				aux_hf.create_group("/radiation") #or do nothing if exists
-				######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
-				# # initialize variables for parallel loop
-				if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
-					psi0_c=hf['radiation']['psi0_c'] 
-					def compute_E_RMS_array(sl):	
-						sl+=1
-						i=sl
-						if args.repeat:
-							i=1
-						qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
-						temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-						psi0_c=temp_hf['radiation']['psi0_c'][:]
-						row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
-						for n in range(0,n_species):
-							numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
-							denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
-							row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
-						return row
-					if num_cores!=1:
-						results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
-						#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
-						qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-						E_RMS_array=np.hstack(results)
-					else:
-						E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
-						for sl in range(0,n_hyperslabs):
-							E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
-					for n in range(0,n_species):
-						qprint("Writing E_RMS_"+str(n)+" out to file")
-						aux_hf.create_dataset("/radiation/E_RMS_"+['e','e-bar','mt','mt-bar'][n],data=E_RMS_array[n])
-					del E_RMS_array
-					if 'results' in locals():
-						del results
-				# ######## luminosity part ###########
-				if not args.disable or ("luminosity" not in args.disable and "radiation" not in args.disable):
-					qprint("Computing luminosities")
-					psi1_e=hf['radiation']['psi1_e']
-					radius=hf['mesh']['x_ef'].value
-					agr_e=hf['fluid']['agr_e'].value
-					cell_area_GRcorrected=4*pi*radius**2/agr_e**4
-					lumin=np.empty((dims[2],dims[1],dims[0]))
-					lumin_array=[]
-					def compute_luminosity(species,sl):
-						j=sl
-						if args.repeat:
-							sl=0
-						temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
-						psi1_e=temp_hf['radiation']['psi1_e']
-						qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
-						del temp_hf
-						return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
-					lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
-					for species in range(0,n_species):
-						qprint("Computing luminosity for species "+str(species)+":")
-						if num_cores!=1 and n_hyperslabs>1:
-							lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
+					if group[0] in ['abundance','radiation','mesh','fluid']:
+						copygroup(group)
+			if args.aux:
+				if args.disable and "radiation" in args.disable:
+					eprint("!	Derived value creation (besides ongrid_mask) overridden by `--disable radiation` flag")
+				else:
+					qprint("Creating derived values")
+					n_groups=hf['radiation']['raddim'][0]
+					n_species=hf['radiation']['raddim'][1]
+					energy_edge=hf['radiation']['unubi'].value
+					energy_center=hf['radiation']['unui'].value
+					d_energy=[]
+					for i in range(0,n_groups):
+						d_energy.append(energy_edge[i+1]-energy_edge[i])
+					d_energy=np.array(d_energy)
+					e3de = energy_center**3*d_energy
+					e5de = energy_center**5*d_energy
+					cvel=2.99792458e10
+					pi=3.141592653589793
+					ergmev = 1.602177e-6
+					h = 4.13567e-21
+					ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
+					step=dims[1]/n_hyperslabs
+					#open new auxilary hdf file or overite existing one. 
+					
+					aux_hf.create_group("/radiation") #or do nothing if exists
+					######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
+					# # initialize variables for parallel loop
+					if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
+						psi0_c=hf['radiation']['psi0_c'] 
+						def compute_E_RMS_array(sl):	
+							sl+=1
+							i=sl
+							if args.repeat:
+								i=1
+							qprint("Computing E_RMS_[1.."+str(n_species)+"] for slice "+str(sl)+" from "+re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)))
+							temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
+							psi0_c=temp_hf['radiation']['psi0_c'][:]
+							row=np.empty((n_species,dims[2]/n_hyperslabs,dims[1],dims[0]))
+							for n in range(0,n_species):
+								numerator=np.sum(psi0_c[:,:,:,n]*e5de,axis=3)
+								denominator=np.sum(psi0_c[:,:,:,n]*e3de,axis=3)
+								row[n][:][:][:]=np.sqrt(numerator/(denominator+1e-100))
+							return row
+						if num_cores!=1:
+							results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
+							#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+							qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
+							E_RMS_array=np.hstack(results)
 						else:
+							E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
 							for sl in range(0,n_hyperslabs):
-								lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
-					qprint("########################################")
-					for n,lumin in enumerate(lumin_array):
-						qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
-						aux_hf.create_dataset("/radiation/Luminosity_"+['e','e-bar','mt','mt-bar'][n],data=lumin)
-			# now stack mask for YY grid:
-			qprint("########################################")
-			qprint("Creating On_grid_mask")
-			aux_hf.create_group("/mesh") #or do nothing if exists
-			mask_slice = hf['mesh']['ongrid_mask'].value
-			mask = np.dstack( mask_slice for i in range(0,extents[0]))
-			del mask_slice
-			qprint("Writing On_grid_mask to auxillary file")
-			aux_hf.create_dataset("/mesh/mask",data=mask)
-			aux_hf.close()
+								E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
+						for n in range(0,n_species):
+							qprint("Writing E_RMS_"+str(n)+" out to file")
+							aux_hf.create_dataset("/radiation/E_RMS_"+['e','e-bar','mt','mt-bar'][n],data=E_RMS_array[n])
+						del E_RMS_array
+						if 'results' in locals():
+							del results
+					# ######## luminosity part ###########
+					if not args.disable or ("luminosity" not in args.disable and "radiation" not in args.disable):
+						qprint("Computing luminosities")
+						psi1_e=hf['radiation']['psi1_e']
+						radius=hf['mesh']['x_ef'].value
+						agr_e=hf['fluid']['agr_e'].value
+						cell_area_GRcorrected=4*pi*radius**2/agr_e**4
+						lumin=np.empty((dims[2],dims[1],dims[0]))
+						lumin_array=[]
+						def compute_luminosity(species,sl):
+							j=sl
+							if args.repeat:
+								sl=0
+							temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+							psi1_e=temp_hf['radiation']['psi1_e']
+							qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+							del temp_hf
+							return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
+						lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
+						for species in range(0,n_species):
+							qprint("Computing luminosity for species "+str(species)+":")
+							if num_cores!=1 and n_hyperslabs>1:
+								lumin_array[species] = np.vstack(Parallel(n_jobs=num_cores)(delayed(compute_luminosity)(species,sl) for sl in range(species,n_hyperslabs)))
+							else:
+								for sl in range(0,n_hyperslabs):
+									lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
+						qprint("########################################")
+						for n,lumin in enumerate(lumin_array):
+							qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+							aux_hf.create_dataset("/radiation/Luminosity_"+['e','e-bar','mt','mt-bar'][n],data=lumin)
+				# now stack mask for YY grid:
+				qprint("########################################")
+				qprint("Creating On_grid_mask")
+				aux_hf.create_group("/mesh") #or do nothing if exists
+				mask_slice = hf['mesh']['ongrid_mask'].value
+				mask = np.dstack( mask_slice for i in range(0,extents[0]))
+				del mask_slice
+				qprint("Writing On_grid_mask to auxillary file")
+				aux_hf.create_dataset("/mesh/mask",data=mask)
+		if args.aux or args.reduce:
+			if args.reduce:
+				hf.close()
+				hf=aux_hf
+				filename=str(hf.filename)
+				entities['h5path']=str(hf.filename[:-3])
+			else:	
+				aux_hf.close()
 			del aux_hf
 		############################################################################################################################################################################################
 		#Begin other part
@@ -340,6 +363,8 @@ if __name__ == '__main__':
 			domain.remove(grid['Radiation'])
 			del grid['Radiation']
 		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
+		h5string=['&h5path;01','&h5path;'][args.reduce]
+		auxh5string=["&h5path;aux.h5",'&h5path;.h5'][args.reduce]
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
@@ -353,7 +378,7 @@ if __name__ == '__main__':
 					parent_element=unit_changing_function
 				hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
-				et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
+				et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
 				
 			et.SubElement(grid[name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 		# for name in grid:
@@ -384,29 +409,9 @@ if __name__ == '__main__':
 		# Loop through all standard scalars in "Hydro" grid
 		if 'Mesh' in grid:
 			at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-			et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= "&h5path;aux.h5:/mesh/mask"
+			et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= auxh5string+":/mesh/mask"
 		if 'Hydro' in grid:
-			# Storage_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
-			storage_names = { 
-				"Entropy":"entropy",
-				"v_radial":"u_c",
-				"v_theta":"v_c",
-				"v_phi":"w_c",
-				"BruntViasala_freq":"wBVMD",
-				"Electron_fraction":"ye_c",
-				"Gravity_phi":"grav_x_c",
-				"Gravity_r":"grav_y_c",
-				"Gravity_theta":"grav_z_c",
-				"Lepton_fraction":"ylep",
-				"Mach_number":"v_csound",
-				"Neutrino_Heating_rate":"dudt_nu",
-				"Nuclear_Heating_rate":"dudt_nuc",
-				"Pressure":"press",
-				"Temperature":"t_c",
-				# "mask":"",#computed quantity to be added later
-				"Density":"rho_c",
-			}
-			for name in storage_names:
+			for name in hydro_names: # hydro_names was defined well above because it was needed in the reduction routine matplot uses
 				at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 				hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
@@ -421,9 +426,9 @@ if __name__ == '__main__':
 						if 'fun' in globals():
 							return_element=fun
 						if args.repeat:
-							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= h5string + ".h5:/fluid/" + hydro_names[name]
 						else:
-							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/fluid/" + storage_names[name]
+							et.SubElement(return_element,"DataItem",Dimensions=[dimstr_sub,'1 '+dimstr_sub][is_2d],NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/fluid/" + hydro_names[name]
 						n+=1
 		############################################################################################################################################################################################
 		# Abundance part:
@@ -444,9 +449,9 @@ if __name__ == '__main__':
 					if 'fun' in globals():
 						return_element=fun
 					if args.repeat:
-						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/nse_c"
+						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= h5string + ".h5:/abundance/nse_c"
 					else:
-						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/nse_c"
+						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/nse_c"
 					n+=1
 			del dim_nse,dim_nse_str
 			species_names=hf['abundance']['a_name'].value
@@ -471,7 +476,7 @@ if __name__ == '__main__':
 								parent_element=unit_changing_function
 							hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 							et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
-							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = "&h5path;01" + processed_suffix + ".h5:/mesh/" + coord_name
+							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
 							
 						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
 						# The next two lines could replace the above if the python library worked with references
@@ -493,9 +498,9 @@ if __name__ == '__main__':
 						dataElement = et.SubElement(return_element,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+[extents_sub,'1 '+extents_str][is_2d]+" 1"
 						if args.repeat==True:
-							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;01" + processed_suffix + ".h5:/abundance/xn_c"
+							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= h5string + ".h5:/abundance/xn_c"
 						else:
-							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + str(format(n, '02d')) + processed_suffix + ".h5:/abundance/xn_c"
+							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/xn_c"
 						n+=1
 		############################################################################################################################################################################################
 		##Create luminosity and E_RMS xdmf
@@ -511,7 +516,7 @@ if __name__ == '__main__':
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/Luminosity_"+sp
+				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/Luminosity_"+sp
 
 		############################################################################################################################################################################################
 		# Write document tree to file
