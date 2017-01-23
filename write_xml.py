@@ -31,19 +31,8 @@ elif socket.gethostname()=='Lycoris':
 
 import six
 if __name__ == '__main__':
-	# try:
-	# 	import visit
-	# 	import visit_utils
-	# except ImportError:
-	# 	eprint("Error: visit module import failed\n")
-	# 	eprint('Please make sure visit\'s path is in $PATH')
-	# 	eprint('	( /path/to/visit/bin )')
-	# 	eprint('Please make sure visit\'s /lib/site-packages directory is in $PYTHONPATH')
-	# 	eprint ('	( /path/to/visit/VersionNumber/platform/lib/site-packages )')
-	# 	sys.exit()
-	############################################################################################################################################################################################
 	# Contstruct Parser:
-	def lowers(strs): #fybctuib checker to make text case insensitive
+	def lowers(strs): #function checker to make text case insensitive
 		return str(strs).lower()
 	parser = argparse.ArgumentParser(description="Generate XDMF files from Chimera hdf5 files")
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
