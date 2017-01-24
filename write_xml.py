@@ -49,7 +49,7 @@ if __name__ == '__main__':
 	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
-	parser.add_argument('--reduce',dest='reduce',action='store_const',const=True, help='Also copy over the reduced data to the auxilary file')
+	parser.add_argument('--reduce',dest='reduce',default=False,action='store_const',const=True, help='Also copy over the reduced data to the auxilary file')
 	args=parser.parse_args()
 	#End Parser construction
 	#####################################################################################################################################################################################################
@@ -208,23 +208,18 @@ if __name__ == '__main__':
 			"Density":"rho_c"
 		}
 		# compute luminosity auxilary variabes
+		auxname=['aux','red'][args.reduce]
 		if args.aux or args.reduce:
 			qprint('Creating auxillary file')
-			aux_hf=h5py.File(re.sub('\d\d\.h5','aux.h5',re.sub('\d\d_pro\.h5','aux_pro.h5',filename)),'w')
+			aux_hf=h5py.File(re.sub('\d\d\.h5',auxname+'.h5',filename),'w')
 			# prune info
 			if args.reduce:
 				def copygroup(group):
 					aux_hf.create_group(group[0])
 					for item in group[1].items():
-						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name']:
+						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name','i_frame','raddim']:
 							qprint('\tCopying from: '+hf.filename+':/'+group[0]+'/'+item[0]+'\n\t\tTo: '+aux_hf.filename+':/'+group[0]+'/'+item[0])
-							aux_hf[group[0]].create_dataset(item[0],data=item[1].value)
-					# 	for item in hf[group[0]]:
-					# 		aux_hf.copy(group[0]+'/'+item,hf[group[0]][item])
-							# if item in sliced_values:
-							# 	for i in range(1,slices):
-							# 		temp_hf = h5py.File(re.sub("\d\d\.h5",str(format(i, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(i, '02d'))+'_pro.h5',filename)),'r')
-					
+							aux_hf[group[0]].create_dataset(item[0],data=item[1].value)					
 				for group in hf.items():
 					if group[0] in ['abundance','radiation','mesh','fluid']:
 						copygroup(group)
@@ -250,8 +245,8 @@ if __name__ == '__main__':
 					ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
 					step=dims[1]/n_hyperslabs
 					#open new auxilary hdf file or overite existing one. 
-					
-					aux_hf.create_group("/radiation") #or do nothing if exists
+					if not args.reduce:
+						aux_hf.create_group("/radiation") #or do nothing if exists
 					######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
 					# # initialize variables for parallel loop
 					if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
@@ -318,7 +313,8 @@ if __name__ == '__main__':
 				# now stack mask for YY grid:
 				qprint("########################################")
 				qprint("Creating On_grid_mask")
-				aux_hf.create_group("/mesh") #or do nothing if exists
+				if not args.reduce:
+					aux_hf.create_group("/mesh") #or do nothing if exists
 				mask_slice = hf['mesh']['ongrid_mask'].value
 				mask = np.dstack( mask_slice for i in range(0,extents[0]))
 				del mask_slice
@@ -359,12 +355,12 @@ if __name__ == '__main__':
 				if name.capitalize() in grid:
 					domain.remove(grid[name.capitalize()])
 					del grid[name.capitalize()]
-		if not args.aux:
+		if not args.aux: 
 			domain.remove(grid['Radiation'])
 			del grid['Radiation']
 		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
 		h5string=['&h5path;01','&h5path;'][args.reduce]
-		auxh5string=["&h5path;aux.h5",'&h5path;.h5'][args.reduce]
+		auxh5string=["&h5path;"+auxname+".h5",'&h5path;.h5'][args.reduce]
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
@@ -379,8 +375,11 @@ if __name__ == '__main__':
 				hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 				et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
-				
-			et.SubElement(grid[name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+			time_element=et.SubElement(grid[name],"Time")
+			time_function=et.SubElement(time_element,"DataItem",ItemType="Function",Function="$0-$1")
+			et.SubElement(time_function,"DataItem").text=h5string+".h5:/mesh/time"
+			et.SubElement(time_function,"DataItem").text=h5string+".h5:/mesh/t_bounce"
+			del time_element,time_function
 		# for name in grid:
 		# 	if name!='Hydro':
 		# 		et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
@@ -478,7 +477,8 @@ if __name__ == '__main__':
 							et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
 							
-						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['mesh']['time'].value-hf['mesh']['t_bounce'].value))
+						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['mesh']['time'].value))
+						et.SubElement(grid['Abundance'+'/'+element_name],"Information",Name='Time_bounce',Value=str(hf['mesh']['t_bounce'].value))
 						# The next two lines could replace the above if the python library worked with references
 						# et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 						# et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
@@ -511,7 +511,7 @@ if __name__ == '__main__':
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= "&h5path;aux.h5:/radiation/E_RMS_"+sp
+				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/E_RMS_"+sp
 				# Luminosity_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
 				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
