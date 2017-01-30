@@ -131,7 +131,9 @@ if __name__ == '__main__':
 	for filename in args.files:
 		if re.search('(?!.*\/).*',filename).group()[:2] != '2D':
 			unique_set.add(filename[:-5]+'01.h5')
+			reduced_3d=False
 		else:
+			reduced_3d=True
 			unique_set.add(filename)
 	if len(unique_set)!=len(args.files):
 		qprint('Warning: redundant files databases found and ignored \n\tOne or more foo_01.h5 and foo_0\d.h5 found in filename list')
@@ -177,7 +179,6 @@ if __name__ == '__main__':
 			dims.append(hf['mesh']['y_ef'].shape[0])
 			dims.append(2)
 			extents=[dim-1 for dim in dims]
-			br()
 		topo_type='3DRectMesh'
 		geom_type='VXVYVZ'
 		is_3d=True
