@@ -38,9 +38,9 @@ if __name__ == '__main__':
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 	# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
-	parser.add_argument('--threads',dest='threads',action='store',metavar='int',type=int, nargs=1, help='specify number of threads')
-	parser.add_argument('--slices',dest='slices',metavar='int',action='store',type=int,nargs='?', help='number of slices to use')
-	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',type=str,nargs='?', help='specify the xmf file prefix')
+	parser.add_argument('--threads',type=int,dest='threads',action='store',metavar='int', nargs=1, help='specify number of threads')
+	parser.add_argument('--slices',type=int,dest='slices',metavar='int',action='store',nargs='?', help='number of slices to use')
+	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',nargs='?', help='specify the xmf file prefix')
 	parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
 	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
@@ -50,6 +50,7 @@ if __name__ == '__main__':
 	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
 	parser.add_argument('--reduce',dest='reduce',default=False,action='store_const',const=True, help='Also copy over the reduced data to the auxilary file')
+	parser.add_argument('--ctime','-t',type=str,default='auto',help='Use this unix time as the instead of the ctime from the hdf file')
 	args=parser.parse_args()
 	#End Parser construction
 	#####################################################################################################################################################################################################
@@ -128,18 +129,55 @@ if __name__ == '__main__':
 	old_time=start_time # for speed diagnostics
 	unique_set=set()
 	for filename in args.files:
-		unique_set.add(filename[:-5]+'01.h5')
+		if re.search('(?!.*\/).*',filename).group()[:2] != '2D':
+			unique_set.add(filename[:-5]+'01.h5')
+		else:
+			unique_set.add(filename)
 	if len(unique_set)!=len(args.files):
 		qprint('Warning: redundant files databases found and ignored \n\tOne or more foo_01.h5 and foo_0\d.h5 found in filename list')
 	for filename in unique_set:
-		hf = h5py.File(filename,'r')
-		dims=[]
-		for dim in hf['mesh']['array_dimensions']: #full dimensions of mesh
-			dims.append(dim) 
+		# explode filename into list
+		file_directory=''
+		if re.search('.*\/(?!.+\/)',filename):
+			file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
+		if args.prefix:
+			filename_part[0]=args.prefix
+		if args.dir:
+			file_directory = str(args.dir)
+			qprint("Directory set to "+file_directory)
+		extension='.xmf'
+		if not file_directory.endswith('/') and file_directory != '':
+			file_directory+='/'
+		if args.xdmf:
+			extension='.xdmf'
+		if filename_part[0]=='2D':
+			if args.shortfilename:
+				file_out_name=file_directory+filename_part[1]+'-'+filename_part[3].split('-')[1].split('.')[0]+extension
+			else:
+				file_out_name=file_directory+re.search('(?!.*\/).*',filename).group()[:-3]+extension
+		elif args.shortfilename:
+			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+		else:
+			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		try:
+			hf = h5py.File(filename,'r')
+		except:
+			hf = h5py.File(filename)
+		dims=[] #IE the max possible dimensions stored
 		extents = []  #IE the dimensions actually used in this particular run
-		extents.append(hf['mesh']['radial_index_bound'][1])
-		extents.append(hf['mesh']['theta_index_bound'][1])
-		extents.append(hf['mesh']['phi_index_bound'][1])
+		if filename_part[0]!='2D':
+			for dim in hf['mesh']['array_dimensions']: #full dimensions of mesh
+				dims.append(dim) 
+			extents.append(hf['mesh']['radial_index_bound'][1])
+			extents.append(hf['mesh']['theta_index_bound'][1])
+			extents.append(hf['mesh']['phi_index_bound'][1])
+		else:
+			dims.append(hf['mesh']['x_ef'].shape[0])
+			dims.append(hf['mesh']['y_ef'].shape[0])
+			dims.append(2)
+			extents=[dim-1 for dim in dims]
+			br()
 		topo_type='3DRectMesh'
 		geom_type='VXVYVZ'
 		is_3d=True
@@ -160,25 +198,6 @@ if __name__ == '__main__':
 		}
 		if is_3d:
 			entities['Extent_phi']=extents[2]
-		# explode filename into list
-		file_directory=''
-		if re.search('.*\/(?!.+\/)',filename):
-			file_directory = re.search('.*\/(?!.+\/)',filename).group()
-		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
-		if args.prefix:
-			filename_part[0]=args.prefix
-		if args.dir:
-			file_directory = str(args.dir)
-			qprint("Directory set to "+file_directory)
-		extension='.xmf'
-		if not file_directory.endswith('/') and file_directory != '':
-			file_directory+='/'
-		if args.xdmf:
-			extension='.xdmf'
-		if args.shortfilename:
-			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
-		else:
-			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
 		slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
 		if args.slices:
 			if not args.slices>slices:
@@ -341,9 +360,12 @@ if __name__ == '__main__':
 		extents_str = ' '.join([str(x) for x in extents[::-1]])
 		# create xdmf element
 		xdmf = et.Element("Xdmf", Version="2.0")
-		# create Domain element
+		# add Domain element
 		domain = et.SubElement(xdmf,"Domain")
-
+		# add creation timestamp
+		if args.ctime is None or args.ctime=='auto':
+			args.ctime=str(os.path.getctime(filename))
+		et.SubElement(domain,"Information",Name="ctime",Value=args.ctime)
 		############################################################################################################################################################################################
 		#create main "Hydro" grid that will contain most scalars and Abundance grid that will contain n and p counts
 		grid = {'Hydro':et.SubElement(domain,"Grid",Name="Hydro"),
@@ -359,7 +381,7 @@ if __name__ == '__main__':
 			domain.remove(grid['Radiation'])
 			del grid['Radiation']
 		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
-		h5string=['&h5path;01','&h5path;'][args.reduce]
+		h5string=['&h5path;01','&h5path;'][args.reduce+reduced_3d]
 		auxh5string=["&h5path;"+auxname+".h5",'&h5path;.h5'][args.reduce]
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
@@ -375,11 +397,16 @@ if __name__ == '__main__':
 				hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 				et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
-			time_element=et.SubElement(grid[name],"Time")
-			time_function=et.SubElement(time_element,"DataItem",ItemType="Function",Function="$0-$1")
-			et.SubElement(time_function,"DataItem").text=h5string+".h5:/mesh/time"
-			et.SubElement(time_function,"DataItem").text=h5string+".h5:/mesh/t_bounce"
-			del time_element,time_function
+			#define time element staticly for visit and dynamically for pyplot
+			if hf['/mesh/t_bounce'] is not None:
+				bounce=hf['/mesh/t_bounce'].value
+			else:
+				bounce=0
+			et.SubElement(grid[name],"Time",Value=str(hf['/mesh/time'].value-bounce))
+			time_function=et.SubElement(et.SubElement(grid[name],'Information',Name='Time'),"DataItem",ItemType="Function",Function="$0-$1")
+			et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/time"
+			et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/t_bounce"
+			del time_function,bounce
 		# for name in grid:
 		# 	if name!='Hydro':
 		# 		et.SubElement(grid[name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
@@ -476,9 +503,17 @@ if __name__ == '__main__':
 							hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 							et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
-							
-						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['mesh']['time'].value))
-						et.SubElement(grid['Abundance'+'/'+element_name],"Information",Name='Time_bounce',Value=str(hf['mesh']['t_bounce'].value))
+						
+						if hf['/mesh/t_bounce']:
+							bounce=hf['/mesh/t_bounce'].value
+						else:
+							bounce=0
+						et.SubElement(grid['Abundance'+'/'+element_name],"Time",Value=str(hf['/mesh/time'].value-bounce))
+						del bounce
+						time_function=et.SubElement(et.SubElement(grid['Abundance'+'/'+element_name],'Information',Name='Time'),"DataItem",ItemType="Function",Function="$0-$1")
+						et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/time"
+						et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/t_bounce"
+						del time_function
 						# The next two lines could replace the above if the python library worked with references
 						# et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
 						# et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
