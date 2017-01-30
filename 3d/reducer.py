@@ -127,6 +127,7 @@ if __name__ == '__main__':
 			reduced_hf['X'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
 			y=np.append(hf['mesh']['y_ef'],hf['mesh']['y_ef'].value[1:]+np.pi)
 			reduced_hf['X'].create_dataset('/mesh/y_ef',data=y)
+			reduced_hf['X'].create_dataset('/mesh/array_size',data=y)
 			# Y slice / XZ plane mesh:
 			reduced_hf['Y'].create_group('/mesh')
 			reduced_hf['Y'].create_dataset('/mesh/x_ef',data=hf['mesh']['x_ef'])
