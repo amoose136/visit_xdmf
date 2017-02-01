@@ -18,18 +18,19 @@ def eprint(*args, **kwargs):
 def qprint(*arg,**kwargs):
 	if not args.quiet:
 		print(*arg,**kwargs)
-# For ORNL
-if socket.gethostname()[:4]=='rhea':
+#Pathing compatibility hacks
+# For Rhea or BlueWaters
+if socket.gethostname()[:4]=='rhea' or re.search('.*h2ologin.*',socket.gethostname()): # The regular expression just looks for 'h2ologin' anywhere in the string
 	# sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
-	sys.path.append('./lib/python2.7/site-packages') #added for the assumption that script is called from base directory
+	sys.path.append('./lib/python2.7/site-packages') #added for the assumption that script is called from base directory. IDK if this works if it's called from somewhere else.
 	# sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
-if socket.gethostname()[:5]=='titan':
+# For Titan
+elif socket.gethostname()[:5]=='titan':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 # For my laptop
 elif socket.gethostname()=='Lycoris':
 	sys.path.append('/Applications/VisIt.app/Contents/Resources/2.10.2/darwin-x86_64/lib/site-packages')
 
-import six
 if __name__ == '__main__':
 	# Contstruct Parser:
 	def lowers(strs): #function checker to make text case insensitive
@@ -58,16 +59,22 @@ if __name__ == '__main__':
 	try:
 		#Most likly to fail part.
 		import h5py
+		import six
 	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
 	except ImportError:
 		try:
 			qprint("h5py load failed. Trying to run under reloaded modules")
 			try:
 				if not args.norepeat:
+					#for Rhea
 					if socket.gethostname()[:4]=='rhea':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module unload PE-intel python;module load PE-gnu python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+					#for Titan
 					if socket.gethostname()[:5]=='titan':
 						sp.call(['bash -cl "cd '+os.getcwd()+'; module load python python_h5py;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
+					#for BlueWaters
+					if re.search('.*h2ologin.*',socket.gethostname()) is not None:
+						sp.call(['bash -cl "cd '+os.getcwd()+'; module load bwpy;python '+(' '.join(sys.argv))+' --norepeat"'],shell=True)
 					else:
 						raise ValueError('aw crap, no known \'module\' command')
 				else:
