@@ -59,7 +59,6 @@ if __name__ == '__main__':
 	try:
 		#Most likly to fail part.
 		import h5py
-		import six
 	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
 	except ImportError:
 		try:
@@ -128,6 +127,12 @@ if __name__ == '__main__':
 		num_cores=1
 		if args.threads and args.threads!=1:
 			eprint("	Warning: cannot override thread count, thread flag ignored")
+	try:
+		import six
+	except ImportError:
+		eprint("Fatal error: could not import six")
+		eprint("	(six is used to maintain python 2 compatibility with python 3 notation)")
+		sys.exit()
 	if args.repeat and num_cores!=1:
 		num_cores=1
 		qprint("Running with single thread")
@@ -297,7 +302,7 @@ if __name__ == '__main__':
 							#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
 							qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 							E_RMS_array=np.hstack(results)
-						else:
+						else: #IE more than one core
 							E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
 							for sl in range(0,n_hyperslabs):
 								E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
