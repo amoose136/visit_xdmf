@@ -418,7 +418,7 @@ if __name__ == '__main__':
 					args.ctime=str(os.path.getctime(filename))
 				filename=hf.filename
 			else:
-				entities['aux_h5path']=str(aux_hf.filename[:-3])	
+				entities['aux_h5path']=rel_hdf_directory+AuxName[:-3]
 				aux_hf.close()
 			del aux_hf
 		############################################################################################################################################################################################
@@ -455,7 +455,7 @@ if __name__ == '__main__':
 			del grid['Radiation']
 		# Note that I had to explicitly define all the grids because the XDMF python API doesn't handle references
 		h5string=['&h5path;01','&h5path;'][args.reduce+reduced_3d]
-		auxh5string=["&h5path;"+AuxSuffix+".h5",'&h5path;.h5'][args.reduce]
+		auxh5string=["&aux_h5path;.h5",'&h5path;.h5'][args.reduce]
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
@@ -508,7 +508,8 @@ if __name__ == '__main__':
 		# Loop through all standard scalars in "Hydro" grid
 		if 'Mesh' in grid:
 			at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
-			et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= auxh5string+":/mesh/mask"
+			if args.aux:
+				et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= auxh5string+":/mesh/mask"
 		if 'Hydro' in grid:
 			for name in hydro_names: # hydro_names was defined well above because it was needed in the reduction routine matplotlib uses
 				at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
