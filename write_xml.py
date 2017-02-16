@@ -39,20 +39,22 @@ if __name__ == '__main__':
 	# parser.files is a list of 1 or more h5 files that will have xdmf files generated for them
 	parser.add_argument('files',metavar='foo.h5',type=str,nargs='+',help='hdf5 files to process (1 or more args)')
 	# parser.add_argument('--extents','-e',dest='dimensions',metavar='int',action='store',type=int,nargs=3, help='dimensions to crop (by grid cell number not spatial dimensions)')
-	parser.add_argument('--threads',type=int,dest='threads',action='store',metavar='int', nargs=1, help='specify number of threads')
-	parser.add_argument('--slices',type=int,dest='slices',metavar='int',action='store',nargs='?', help='number of slices to use')
-	parser.add_argument('--prefix','-p',dest='prefix',metavar='str',action='store',nargs='?', help='specify the xmf file prefix')
-	parser.add_argument('--repeat','-r',dest='repeat',action='store_const',const=True, help='use the first wedge for all slices')
-	parser.add_argument('--quiet','-q',dest='quiet',action='store_const',const=True, help='only display error messages (default full debug messages)')
-	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter filenaming convention')
-	parser.add_argument('--norepeat',dest='norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-	parser.add_argument('--disable',dest='disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' AND/OR \'E_RMS\' components')
-	parser.add_argument('--xdmf',dest='xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
-	parser.add_argument('--directory',dest='dir',metavar='str', const='.',action='store',type=str,nargs='?',help='Output xdmf in dirctory specified instead of next to hdf files')
-	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file')
-	parser.add_argument('--reduce',dest='reduce',default=False,action='store_const',const=True, help='Also copy over the reduced data to the auxilary file')
-	parser.add_argument('--ctime','-t',type=str,default='auto',help='Use this unix time as the instead of the ctime from the hdf file')
+	parser.add_argument('--threads',type=int,action='store', nargs=1, help='specify number of threads')
+	parser.add_argument('--slices',type=int,action='store',nargs='?', help='number of slices to use')
+	parser.add_argument('--prefix','-p',metavar='str',action='store',nargs='?', help='specify the XDMF file prefix')
+	parser.add_argument('--repeat','-r',action='store_const',const=True, help='use the first wedge for all slices')
+	parser.add_argument('--quiet','-q',action='store_const',const=True, help='only display error messages (default full debug messages)')
+	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter file naming convention')
+	parser.add_argument('--norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
+	parser.add_argument('--disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' AND/OR \'E_RMS\' components')
+	parser.add_argument('--xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
+	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file (or append to the reduced file)')
+	parser.add_argument('--reduce',default=False,action='store_const',const=True, help='Also copy over the reduced data to the auxiliary file')
+	parser.add_argument('--ctime','-t',type=str,default='auto',help='Use this unix time as the instead of the ctime from the HDF5 file')
+	parser.add_argument('--fnames',type=str,nargs='+',action='store',help='name the files created explicitly. First is for the XDMF, second is for the auxiliary or reduced file. \'auto\' will skip assignment for that filename.')
+	parser.add_argument('--directory',type=str,nargs='+',dest='dir',action='store',help='Output XDMF in directory specified instead of next to HDF5 files. If two arguments, the auxiliary or reduced file takes the second value.')
 	args=parser.parse_args()
+	
 	#End Parser construction
 	#####################################################################################################################################################################################################
 	#This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
@@ -85,7 +87,7 @@ if __name__ == '__main__':
 				raise ValueError('aw crap')
 			qprint("Finished")
 		except:
-			eprint("Fatal error: could not import h5py or reload modules to make it possible. h5 reading and writing is impossible without h5py.")
+			eprint("Fatal error: could not import H5PY or reload modules to make it possible. HDf reading and writing is impossible without H5PY.")
 		sys.exit()
 	#Robustly import an xml writer/parser
 	try:
@@ -150,30 +152,83 @@ if __name__ == '__main__':
 	if len(unique_set)!=len(args.files):
 		qprint('Warning: redundant files databases found and ignored \n\tOne or more foo_01.h5 and foo_0\d.h5 found in filename list')
 	for filename in unique_set:
-		# explode filename into list
-		file_directory=''
-		if re.search('.*\/(?!.+\/)',filename):
-			file_directory = re.search('.*\/(?!.+\/)',filename).group()
+		# explode filename parts into list
 		filename_part = re.search('(?!.*\/).*',filename).group().rsplit('_')
 		if args.prefix:
 			filename_part[0]=args.prefix
-		if args.dir:
-			file_directory = str(args.dir)
-			qprint("Directory set to "+file_directory)
+		
+		#pull any directory information from input arguments
+		xdmf_directory='.'
+		hdf_directory='.'
+		if re.search('.*\/(?!.+\/)',filename):
+			xdmf_directory = re.search('.*\/(?!.+\/)',filename).group()
+		if args.dir is not None:
+			try:
+				assert len(args.dir) in range(1,3) #accept 1 or 2 elements
+			except AssertionError: 
+				eprint('wrong number of arguments for --directory')
+				eprint('	--directory takes 1 or 2 arguments')
+				sys.exit()
+			xdmf_directory=args.dir[0]
+			qprint("XDMF output directory set to "+xdmf_directory)
+			try:
+				if len(args.dir)==2:
+					assert args.reduce or args.aux
+					hdf_directory=args.dir[1]
+					rel_hdf_directory=os.path.relpath(hdf_directory,xdmf_directory)
+					qprint("HDF output directory set to "+hdf_directory)
+			except AssertionError:
+				eprint('There may only be 1 argument for --directory if not reducing or producing auxiliary quantities')
+				sys.exit()
+		#make sure that the last character in the xdmf_directory string is '/' if it's not empty
+		def check_directory_end(string):
+			if not string.endswith('/'):
+				string+='/'
+			if string=='./':
+				string=''
+			return string
+		xdmf_directory,hdf_directory,rel_hdf_directory=[check_directory_end(directory_string) for directory_string in [xdmf_directory,hdf_directory,rel_hdf_directory]]
+		#determine whether to use .xdmf or .xmf
 		extension='.xmf'
-		if not file_directory.endswith('/') and file_directory != '':
-			file_directory+='/'
 		if args.xdmf:
 			extension='.xdmf'
+
+		# For the special case of files from reducer.py the file name is handled a little different	
 		if filename_part[0]=='2D':
 			if args.shortfilename:
-				file_out_name=file_directory+filename_part[1]+'-'+filename_part[3].split('-')[1].split('.')[0]+extension
+				file_out_name=xdmf_directory+filename_part[1]+'-'+filename_part[3].split('-')[1].split('.')[0]+extension
 			else:
-				file_out_name=file_directory+re.search('(?!.*\/).*',filename).group()[:-3]+extension
+				file_out_name=xdmf_directory+re.search('(?!.*\/).*',filename).group()[:-3]+extension
+		
+		# In the normal case
 		elif args.shortfilename:
-			file_out_name=file_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
+			file_out_name=xdmf_directory+filename_part[0]+'-'+filename_part[3]+'-'+filename_part[1]+extension
 		else:
-			file_out_name=file_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+			file_out_name=xdmf_directory+filename_part[0]+'_grid-'+filename_part[3]+'_step-'+filename_part[1]+extension
+		if args.fnames is not None:
+			try:
+				assert len(args.fnames) in range(1,3) #accept 1 or 2 elements
+			except AssertionError: 
+				eprint('wrong number of arguments for --fname')
+				eprint('	--fname takes 1 or 2 arguments')
+				sys.exit()
+			try:
+				assert len(unique_set)==1
+			except AssertionError:
+				eprint('May only override complete filename if only one source HDF file is provided. Each sequential file would overide the last. Perhaps the --prefix command will suffice?')
+				sys.exit()
+			if args.fnames[0].lower()!='auto':
+				file_out_name=xdmf_directory+args.fnames[0]+extension
+			try:
+				if len(args.fnames)==2 and args.fnames[1].lower()!='auto':
+						assert args.reduce or args.aux
+						AuxName=args.fnames[1]
+						if AuxName[::-3]!='.h5':
+							AuxName+='.h5'
+			except AssertionError:
+				eprint('There may only be 1 argument for --fname if not reducing or producing auxiliary quantities')
+				sys.exit()
+		#now open the file
 		try:
 			hf = h5py.File(filename,'r')
 		except:
@@ -194,8 +249,8 @@ if __name__ == '__main__':
 		topo_type='3DRectMesh'
 		geom_type='VXVYVZ'
 		is_3d=True
-		is_2d=False
-		if extents[2]==1:
+		is_2d=False #defined twice for contextual convenience
+		if extents[2]==1: # AKA if the size of the last dimension is 1, it doesn't really exist and it's just 2d
 			del extents[2]
 			topo_type='2DRectMesh'
 			geom_type=geom_type[0:4]
@@ -207,11 +262,11 @@ if __name__ == '__main__':
 			"Extent_r":str(extents[0]),
 			"Extent_theta":str(extents[1]),
 			"Dim_r":str(extents[0]+1),
-			"h5path":str(filename[:-5])
+			"h5path":check_directory_end(os.path.relpath('.',xdmf_directory))+str(filename[:-5])
 		}
 		if is_3d:
 			entities['Extent_phi']=extents[2]
-		slices=n_hyperslabs #default slices value if not overidden by "--slices/-s int" argument on program call
+		slices=n_hyperslabs #default slices value if not overridden by "--slices/-s int" argument on program call
 		if args.slices:
 			if not args.slices>slices:
 				slices=args.slices
@@ -236,14 +291,15 @@ if __name__ == '__main__':
 			"Nuclear_Heating_rate":"dudt_nuc",
 			"Pressure":"press",
 			"Temperature":"t_c",
-			# "mask":"",#computed quantity to be added later
 			"Density":"rho_c"
 		}
-		# compute luminosity auxilary variabes
-		auxname=['aux','red'][args.reduce]
+		# compute luminosity auxiliary variables
+		AuxSuffix=['aux','red'][args.reduce]
 		if args.aux or args.reduce:
-			qprint('Creating auxillary file')
-			aux_hf=h5py.File(re.sub('\d\d\.h5',auxname+'.h5',filename),'w')
+			qprint('Creating '+['auxiliary','reduced'][args.reduce]+' HDF5 file')
+			if 'AuxName' not in globals():
+				AuxName=re.sub('\d\d\.h5',AuxSuffix+'.h5',filename)
+			aux_hf=h5py.File(hdf_directory+AuxName,'w')
 			# prune info
 			if args.reduce:
 				def copygroup(group):
@@ -255,11 +311,13 @@ if __name__ == '__main__':
 				for group in hf.items():
 					if group[0] in ['abundance','radiation','mesh','fluid']:
 						copygroup(group)
+				entities['h5path']=rel_hdf_directory+AuxName[:-3]
 			if args.aux:
 				if args.disable and "radiation" in args.disable:
 					eprint("!	Derived value creation (besides ongrid_mask) overridden by `--disable radiation` flag")
 				else:
 					qprint("Creating derived values")
+					#define some physical quantities to use for the calculation of derived quantities
 					n_groups=hf['radiation']['raddim'][0]
 					n_species=hf['radiation']['raddim'][1]
 					energy_edge=hf['radiation']['unubi'].value
@@ -276,11 +334,11 @@ if __name__ == '__main__':
 					h = 4.13567e-21
 					ecoef = 4.0 * pi * ergmev/(h*cvel)**3 
 					step=dims[1]/n_hyperslabs
-					#open new auxilary hdf file or overite existing one. 
+					#open new auxiliary hdf file or overwrite existing one. 
 					if not args.reduce:
 						aux_hf.create_group("/radiation") #or do nothing if exists
 					######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
-					# # initialize variables for parallel loop
+					# # initialize variables formatterr parallel loop
 					if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
 						psi0_c=hf['radiation']['psi0_c'] 
 						def compute_E_RMS_array(sl):	
@@ -299,7 +357,7 @@ if __name__ == '__main__':
 							return row
 						if num_cores!=1:
 							results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
-							#concatenate together the member of each array within E_RMS_ARRAY and write to auxilary HDF file
+							#concatenate together the member of each array within E_RMS_ARRAY and write to auxiliary HDF file
 							qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
 							E_RMS_array=np.hstack(results)
 						else: #IE more than one core
@@ -307,7 +365,7 @@ if __name__ == '__main__':
 							for sl in range(0,n_hyperslabs):
 								E_RMS_array[:,sl*step:(sl+1)*step,:,:]=compute_E_RMS_array(sl)
 						for n in range(0,n_species):
-							qprint("Writing E_RMS_"+str(n)+" out to file")
+							qprint("Writing E_RMS_"+str(n)+" out to "+['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
 							aux_hf.create_dataset("/radiation/E_RMS_"+['e','e-bar','mt','mt-bar'][n],data=E_RMS_array[n])
 						del E_RMS_array
 						if 'results' in locals():
@@ -340,7 +398,7 @@ if __name__ == '__main__':
 									lumin_array[species,sl*step:(sl+1)*step,:,:]=compute_luminosity(0,sl)
 						qprint("########################################")
 						for n,lumin in enumerate(lumin_array):
-							qprint("Writing luminosity species "+str(n)+" to auxilary hdf file")
+							qprint("Writing luminosity species "+str(n)+" to "+['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
 							aux_hf.create_dataset("/radiation/Luminosity_"+['e','e-bar','mt','mt-bar'][n],data=lumin)
 				# now stack mask for YY grid:
 				qprint("########################################")
@@ -350,15 +408,17 @@ if __name__ == '__main__':
 				mask_slice = hf['mesh']['ongrid_mask'].value
 				mask = np.dstack( mask_slice for i in range(0,extents[0]))
 				del mask_slice
-				qprint("Writing On_grid_mask to auxillary file")
+				qprint("Writing On_grid_mask to "+['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
 				aux_hf.create_dataset("/mesh/mask",data=mask)
-		if args.aux or args.reduce:
 			if args.reduce:
+				#now that data has been copied from the source hdf to the reduced hdf, close the original file and switch the variable used to the just created file. 
 				hf.close()
 				hf=aux_hf
-				filename=str(hf.filename)
-				entities['h5path']=str(hf.filename[:-3])
-			else:	
+				if args.ctime is None or args.ctime=='auto':
+					args.ctime=str(os.path.getctime(filename))
+				filename=hf.filename
+			else:
+				entities['aux_h5path']=str(aux_hf.filename[:-3])	
 				aux_hf.close()
 			del aux_hf
 		############################################################################################################################################################################################
@@ -376,7 +436,7 @@ if __name__ == '__main__':
 		# add Domain element
 		domain = et.SubElement(xdmf,"Domain")
 		# add creation timestamp
-		if args.ctime is None or args.ctime=='auto':
+		if not args.reduce and args.ctime is None or args.ctime=='auto':
 			args.ctime=str(os.path.getctime(filename))
 		et.SubElement(domain,"Information",Name="ctime",Value=args.ctime)
 		############################################################################################################################################################################################
@@ -393,9 +453,9 @@ if __name__ == '__main__':
 		if not args.aux: 
 			domain.remove(grid['Radiation'])
 			del grid['Radiation']
-		# Note that I had to explicitly define all the grids because the xdmf python api doesn't handle references
+		# Note that I had to explicitly define all the grids because the XDMF python API doesn't handle references
 		h5string=['&h5path;01','&h5path;'][args.reduce+reduced_3d]
-		auxh5string=["&h5path;"+auxname+".h5",'&h5path;.h5'][args.reduce]
+		auxh5string=["&h5path;"+AuxSuffix+".h5",'&h5path;.h5'][args.reduce]
 		for name in grid:
 			et.SubElement(grid[name],"Topology",TopologyType=topo_type,NumberOfElements=' '.join([str(x+1) for x in extents[::-1]]))
 			geometry = et.SubElement(grid[name],"Geometry",GeometryType=geom_type)
@@ -450,7 +510,7 @@ if __name__ == '__main__':
 			at = et.SubElement(grid['Mesh'],"Attribute",Name="On_Grid_Mask",AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 			et.SubElement(at,"DataItem",Dimensions=extents_str,NumberType="Float",Precision="8",Format="HDF").text= auxh5string+":/mesh/mask"
 		if 'Hydro' in grid:
-			for name in hydro_names: # hydro_names was defined well above because it was needed in the reduction routine matplot uses
+			for name in hydro_names: # hydro_names was defined well above because it was needed in the reduction routine matplotlib uses
 				at = et.SubElement(grid['Hydro'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 				hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
@@ -553,7 +613,7 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		##Create luminosity and E_RMS xdmf
 		if 'Radiation' in grid:
-			n_species=hf['radiation']['raddim'][1] # in case the auxilary data is not generated this run
+			n_species=hf['radiation']['raddim'][1] # in case the auxiliary data is not generated this run
 			for sp in ['e','e-bar','mt','mt-bar']:
 				# E_RMS_[sp]:
 				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
@@ -570,12 +630,12 @@ if __name__ == '__main__':
 		# Write document tree to file
 		try:
 			f=open(file_out_name,'w')
-			del extension,file_directory
+			del extension,xdmf_directory
 			# if lxml module loaded use it to write document (fasted, simplest implementation):
 			entity_str = ''
 			for key,value in six.iteritems(entities):
 				entity_str+="\n  <!ENTITY "+key+" \""+str(value)+"\">"
-			entity_str+="\n  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontanious freak out session -->"
+			entity_str+="\n  <!-- Note that Dim_r must be exactly 1 more than Extent_r or VisIt will have a spontaneous freak out session -->"
 			try:
 				#write to file:
 				f.write(\
@@ -591,11 +651,19 @@ if __name__ == '__main__':
 						)\
 					)\
 				)
-				#other ElementTree writers can use this slower writer that does the same thing:
+			#other ElementTree writers can use this slower writer that does the same thing:	
 			except:
 				f.close()
-				import xml.etree.cElementTree as et
-				import xml.dom.minidom as md
+				try:
+					import xml.etree.cElementTree as et
+				except ImportError:
+					eprint("Fatal error: Could not re-import cElementTree")
+					sys.exit()
+				try:
+					import xml.dom.minidom as md
+				except ImportError:
+					eprint("Fatal error: Could not import minidom (used to reparse the created xml).")
+					sys.exit()
 				f=open(file_out_name,'w')
 				qprint("Writing "+file_out_name+" with improvised \"pretty print\"")
 				def prettify(elem):
@@ -617,5 +685,5 @@ if __name__ == '__main__':
 			eprint("	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug")
 			sys.exit()
 		############################################################################################################################################################################################
-	#end loop over all hdf5 files
+	#end loop over all HDF5 files
 	############################################################################################################################################################################################
