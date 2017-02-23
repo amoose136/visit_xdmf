@@ -158,8 +158,7 @@ if __name__ == '__main__':
 			filename_part[0]=args.prefix
 		
 		#pull any directory information from input arguments
-		xdmf_directory='.'
-		hdf_directory='.'
+		xdmf_directory, hdf_directory, rel_hdf_directory=['.' for x in range(3)]
 		if re.search('.*\/(?!.+\/)',filename):
 			xdmf_directory = re.search('.*\/(?!.+\/)',filename).group()
 		if args.dir is not None:
