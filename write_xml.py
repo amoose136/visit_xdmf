@@ -532,6 +532,7 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# Abundance part:
 		if 'Abundance' in grid:
+			#For NSE flag:
 			at = et.SubElement(grid['Abundance'],"Attribute",Name='nse_flag',AttributeType="Scalar",Center="Cell",Dimensions=extents_str)
 			hyperslab = et.SubElement(at,"DataItem",Dimensions=extents_str,ItemType="HyperSlab")
 			et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
@@ -553,10 +554,13 @@ if __name__ == '__main__':
 						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/nse_c"
 					n+=1
 			del dim_nse,dim_nse_str
+			# Each of the abundances:
 			species_names=hf['abundance']['a_name'].value
 			if n_elemental_species-1==species_names.shape[0]:
 				species_names=np.append(species_names,'aux')
+			# The end goal is to make isotopes accessible as /Abundance/Element/Z and all other quantities acessible as /Abundance/QuantityName
 			for el,name in enumerate(species_names):
+				#for Isotopes
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
 					element_name=re.sub('\d','',name).capitalize() #set element_name to the capitalized element without the number
 					name=re.sub('\D','',name) #find the transition between elements name and number
@@ -576,7 +580,11 @@ if __name__ == '__main__':
 							hyperslab = et.SubElement(parent_element, "DataItem",Dimensions=str(extents[n]+1),ItemType="HyperSlab")
 							et.SubElement(hyperslab,"DataItem",Dimensions="3 1",Format="XML").text = "0 1 "+str(extents[n]+1)
 							et.SubElement(hyperslab,"DataItem",Dimensions=str(hf['mesh'][coord_name].size),NumberType="Float",Precision="8",Format="HDF").text = h5string + ".h5:/mesh/" + coord_name
+						# The next two lines could replace the above if the python library worked with references
+						# et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
+						# et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 						
+						#Configure timestamp stuff:
 						if hf['/mesh/t_bounce']:
 							bounce=hf['/mesh/t_bounce'].value
 						else:
@@ -587,10 +595,8 @@ if __name__ == '__main__':
 						et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/time"
 						et.SubElement(time_function,"DataItem",Format='HDF').text=h5string+".h5:/mesh/t_bounce"
 						del time_function
-						# The next two lines could replace the above if the python library worked with references
-						# et.SubElement(grid['Abundance'+'/'+element_name],"Topology",Reference="/Xdmf/Domain/Grid[1]/Topology[1]")
-						# et.SubElement(grid['Abundance'+'/'+element_name],"Geometry",Reference="/Xdmf/Domain/Grid[1]/Geometry[1]")
 					attribute=et.SubElement(grid['Abundance'+'/'+element_name],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
+				#for other quantities in /Abundance
 				else:
 					attribute=et.SubElement(grid['Abundance'],"Attribute",Name=name,AttributeType="Scalar",Center="Cell")
 				if is_3d:
@@ -614,18 +620,17 @@ if __name__ == '__main__':
 		##Create luminosity and E_RMS xdmf
 		if 'Radiation' in grid:
 			n_species=hf['radiation']['raddim'][1] # in case the auxiliary data is not generated this run
+			def radiation_xdmf(variable,sp): # add an attribute and corresponding hyperslab
+				attribute = et.SubElement(grid['Radiation'],"Attribute",Name=variable+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
+				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
+				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
+				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/"+variable+sp
 			for sp in ['e','e-bar','mt','mt-bar']:
 				# E_RMS_[sp]:
-				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="E_RMS_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
-				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
-				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/E_RMS_"+sp
+				radiation_xdmf('E_RMS_',sp)
 				# Luminosity_[sp]:
-				attribute = et.SubElement(grid['Radiation'],"Attribute",Name="Luminosity_"+sp,AttributeType="Scalar", Dimensions=extents_str,Center="Cell")
-				hyperslab = et.SubElement(attribute, "DataItem",ItemType="HyperSlab",Dimensions=extents_str)
-				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
-				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/Luminosity_"+sp
-
+				radiation_xdmf('Luminosity_',sp)
+			del radiation_xdmf #function no loger needed
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
@@ -653,7 +658,7 @@ if __name__ == '__main__':
 				)
 			#other ElementTree writers can use this slower writer that does the same thing:	
 			except:
-				f.close()
+				f.close() # close the file that didn't write properly
 				try:
 					import xml.etree.cElementTree as et
 				except ImportError:
@@ -664,22 +669,21 @@ if __name__ == '__main__':
 				except ImportError:
 					eprint("Fatal error: Could not import minidom (used to reparse the created xml).")
 					sys.exit()
-				f=open(file_out_name,'w')
+				f=open(file_out_name,'w') #reopen the file
 				qprint("Writing "+file_out_name+" with improvised \"pretty print\"")
-				def prettify(elem):
+				def prettify(elem): # a function to fix indentation so the result is human readable and editable
 					rough_string = et.tostring(elem, 'ASCII')
 					reparsed = md.parseString(rough_string)
 					t = re.sub('&amp;','&',reparsed.toprettyxml(indent="  "))#lxml prettyprint uses 2 spaces per step so we do here as well
 					t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 					return t
-				# write custom doctype declaration
-				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>")
+				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>") # write custom doctype declaration because this method doesn't give it to you for free.
 				f.close()
 				f=open(file_out_name,'a')
 				f.write(prettify(xdmf))
-			f.close()
-			qprint("--- "+file_out_name+" created in %s seconds ---" % (time.time()-old_time))
-			old_time=time.time()
+			f.close() #done writing -> close file
+			qprint("--- "+file_out_name+" created in %s seconds ---" % (time.time()-old_time)) #tell how long it took
+			old_time=time.time() #reassign old_time for the next file out
 		except:
 			eprint("Fatal error:")
 			eprint("	File write error. Try adding adding a br() (local name of pdb.set_trace()) in the writer section at the end of script to debug")
