@@ -11,19 +11,17 @@ import numpy as np
 from pdb import set_trace as br #For debugging I prefer the c style "break" nomenclature to "trace"
 import multiprocessing as mp #For parallel speedup in derivative values 
 
-#define an error printing function for error reporting to terminal STD error IO stream
+#Define an error printing function for error reporting to terminal STD error IO stream
 def eprint(*args, **kwargs):
     print(*args, file=sys.stderr, **kwargs)
-#define a standard printing function that only functions if there is no silence flag on script invocation
+#Define a standard printing function that only functions if there is no silence flag on script invocation
 def qprint(*arg,**kwargs):
 	if not args.quiet:
 		print(*arg,**kwargs)
 #Pathing compatibility hacks
 # For Rhea or BlueWaters
 if socket.gethostname()[:4]=='rhea' or re.search('.*h2ologin.*',socket.gethostname()): # The regular expression just looks for 'h2ologin' anywhere in the string
-	# sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
 	sys.path.append('./lib/python2.7/site-packages') #added for the assumption that script is called from base directory. IDK if this works if it's called from somewhere else.
-	# sys.path.append('/sw/redhat6/visit/current/linux-x86_64/lib/site-packages/')
 # For Titan
 elif socket.gethostname()[:5]=='titan':
 	sys.path.append('/lustre/atlas/proj-shared/ast109/amos/lib/python2.7/site-packages')
@@ -57,11 +55,11 @@ if __name__ == '__main__':
 	
 	#End Parser construction
 	#####################################################################################################################################################################################################
-	#This next bit is specific to ORNL. If h5py import fails it switches environments and reloads this script
+	#This next bit is specific to ORNL. If H5PY import fails it switches environments and reloads this script
 	try:
-		#Most likly to fail part.
+		#Most likely to fail part.
 		import h5py
-	# Try and correct the h5import error by launching subprocess that calls this script again after loading proper modules on rhea
+	# Try and correct the HDF import error by launching a subprocess that calls this script again after loading proper modules on Rhea
 	except ImportError:
 		try:
 			qprint("h5py load failed. Trying to run under reloaded modules")
@@ -337,10 +335,10 @@ if __name__ == '__main__':
 					if not args.reduce:
 						aux_hf.create_group("/radiation") #or do nothing if exists
 					######## Compute E_RMS_array (size N_species) of arrays (size N_groups) ##############
-					# # initialize variables formatterr parallel loop
+					# # initialize variables formatter parallel loop
 					if not args.disable or ("E_RMS" not in args.disable and "radiation" not in args.disable):
 						psi0_c=hf['radiation']['psi0_c'] 
-						def compute_E_RMS_array(sl):	
+						def compute_E_RMS_array(sl): #A function to do the math to compute RMS energy on a single slice specified by sl 	
 							sl+=1
 							i=sl
 							if args.repeat:
@@ -358,7 +356,7 @@ if __name__ == '__main__':
 							results = Parallel(n_jobs=num_cores)(delayed(compute_E_RMS_array)(sl) for sl in range(0,n_hyperslabs))
 							#concatenate together the member of each array within E_RMS_ARRAY and write to auxiliary HDF file
 							qprint("Concatenating E_RMS_[0.."+str(n_species)+"] results...")
-							E_RMS_array=np.hstack(results)
+							E_RMS_array=np.hstack(results) #joins together all slices for complete results
 						else: #IE more than one core
 							E_RMS_array=np.empty((n_species,dims[2],dims[1],dims[0]))
 							for sl in range(0,n_hyperslabs):
@@ -382,9 +380,9 @@ if __name__ == '__main__':
 							j=sl
 							if args.repeat:
 								sl=0
-							temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)),'r')
+							temp_hf= h5py.File(re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',filename),'r')
 							psi1_e=temp_hf['radiation']['psi1_e']
-							qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',re.sub("\d\d_pro\.h5",str(format(sl+1, '02d'))+'_pro.h5',filename)))
+							qprint("	On slice "+str(j+1)+" of "+str(n_hyperslabs)+" from "+re.sub("\d\d\.h5",str(format(sl+1, '02d'))+'.h5',filename))
 							del temp_hf
 							return np.sum(psi1_e[:,:,:,species]*e3de, axis=3)*np.tile(cell_area_GRcorrected[1:dims[0]+1],(dims[2]/n_hyperslabs,dims[1],1))*(cvel*ecoef*1e-51)
 						lumin_array=np.empty((n_species,dims[2],dims[1],dims[0]))
@@ -410,7 +408,7 @@ if __name__ == '__main__':
 				qprint("Writing On_grid_mask to "+['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
 				aux_hf.create_dataset("/mesh/mask",data=mask)
 			if args.reduce:
-				#now that data has been copied from the source hdf to the reduced hdf, close the original file and switch the variable used to the just created file. 
+				#now that data has been copied from the source HDF to the reduced HDF, close the original file and switch the variable used to the just created file. 
 				hf.close()
 				hf=aux_hf
 				if args.ctime is None or args.ctime=='auto':
@@ -558,7 +556,7 @@ if __name__ == '__main__':
 			species_names=hf['abundance']['a_name'].value
 			if n_elemental_species-1==species_names.shape[0]:
 				species_names=np.append(species_names,'aux')
-			# The end goal is to make isotopes accessible as /Abundance/Element/Z and all other quantities acessible as /Abundance/QuantityName
+			# The end goal is to make isotopes accessible as /Abundance/Element/Z and all other quantities accessible as /Abundance/QuantityName
 			for el,name in enumerate(species_names):
 				#for Isotopes
 				if re.findall('\D\d',name): #if there is a transition between a non digit to a digit in the element name (IE in "li3" it would match because of the "i3")
@@ -617,7 +615,7 @@ if __name__ == '__main__':
 							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/xn_c"
 						n+=1
 		############################################################################################################################################################################################
-		##Create luminosity and E_RMS xdmf
+		##Create luminosity and RMS-energy XDMF
 		if 'Radiation' in grid:
 			n_species=hf['radiation']['raddim'][1] # in case the auxiliary data is not generated this run
 			def radiation_xdmf(variable,sp): # add an attribute and corresponding hyperslab
@@ -626,11 +624,9 @@ if __name__ == '__main__':
 				et.SubElement(hyperslab,"DataItem",Dimensions="3 3",Format="XML").text="0 0 0 1 1 1 "+[extents_str,'1 '+extents_str][is_2d]
 				et.SubElement(hyperslab,"DataItem",Dimensions=dimstr, Format="HDF").text= auxh5string+":/radiation/"+variable+sp
 			for sp in ['e','e-bar','mt','mt-bar']:
-				# E_RMS_[sp]:
 				radiation_xdmf('E_RMS_',sp)
-				# Luminosity_[sp]:
 				radiation_xdmf('Luminosity_',sp)
-			del radiation_xdmf #function no loger needed
+			del radiation_xdmf #function no longer needed
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
@@ -674,7 +670,7 @@ if __name__ == '__main__':
 				def prettify(elem): # a function to fix indentation so the result is human readable and editable
 					rough_string = et.tostring(elem, 'ASCII')
 					reparsed = md.parseString(rough_string)
-					t = re.sub('&amp;','&',reparsed.toprettyxml(indent="  "))#lxml prettyprint uses 2 spaces per step so we do here as well
+					t = re.sub('&amp;','&',reparsed.toprettyxml(indent="  ")) #LXML "pretty print" uses 2 spaces per step so we do here as well
 					t = ''.join(t.splitlines(True)[1:]) #removes extra doc declaration that mysteriously appears
 					return t
 				f.write("<?xml version='1.0' encoding='ASCII'?>\n<!DOCTYPE Xdmf SYSTEM \"Xdmf.dtd\" ["+entity_str+"\n]>") # write custom doctype declaration because this method doesn't give it to you for free.
