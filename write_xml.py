@@ -630,7 +630,15 @@ if __name__ == '__main__':
 		############################################################################################################################################################################################
 		# Write document tree to file
 		try:
-			f=open(file_out_name,'w')
+			try:
+				f=open(file_out_name,'w')
+			except IOError as e:
+				if e.strerror=='Permission denied':
+					eprint('Fatal error: Permission denied for directory '+xdmf_directory)
+					eprint('	Please check that the Python interpreter has appropriate write privileges for the selected directory as launched from your account')
+					os._exit(0) #I use this call because I don't want to raise another exception.
+				else:
+					raise e
 			del extension,xdmf_directory
 			# if lxml module loaded use it to write document (fasted, simplest implementation):
 			entity_str = ''
