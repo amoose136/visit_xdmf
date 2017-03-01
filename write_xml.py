@@ -185,6 +185,7 @@ if __name__ == '__main__':
 				string=''
 			return string
 		xdmf_directory,hdf_directory,rel_hdf_directory=[check_directory_end(directory_string) for directory_string in [xdmf_directory,hdf_directory,rel_hdf_directory]]
+		
 		#determine whether to use .xdmf or .xmf
 		extension='.xmf'
 		if args.xdmf:
@@ -296,7 +297,7 @@ if __name__ == '__main__':
 			qprint('Creating '+['auxiliary','reduced'][args.reduce]+' HDF5 file')
 			if 'AuxName' not in globals():
 				AuxName=re.sub('\d\d\.h5',AuxSuffix+'.h5',filename)
-			aux_hf=h5py.File(hdf_directory+AuxName,'w')
+			aux_hf=h5py.File(os.path.expanduser(hdf_directory+AuxName.split('/')[-1]),'w')
 			# prune info
 			if args.reduce:
 				def copygroup(group):
@@ -631,7 +632,7 @@ if __name__ == '__main__':
 		# Write document tree to file
 		try:
 			try:
-				f=open(file_out_name,'w')
+				f=open(os.path.expanduser(file_out_name),'w')
 			except IOError as e:
 				if e.strerror=='Permission denied':
 					eprint('Fatal error: Permission denied for directory '+xdmf_directory)
