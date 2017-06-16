@@ -44,7 +44,7 @@ if __name__ == '__main__':
 	parser.add_argument('--quiet','-q',action='store_const',const=True, help='only display error messages (default full debug messages)')
 	parser.add_argument('--short','-s',dest='shortfilename',action='store_const',const=True, help='use shorter file naming convention')
 	parser.add_argument('--norepeat',action='store_const',const=True, help='debug variable for infinite recursive execution escaping')
-	parser.add_argument('--disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\',or \'radiation\' components AND/OR \'luminosity\' AND/OR \'E_RMS\' components')
+	parser.add_argument('--disable',action='store',metavar='str',type=lowers, nargs='+', help='disable output of \'abundances\', \'hydro\', \'particles\', or \'radiation\' components AND/OR \'luminosity\' AND/OR \'E_RMS\' components')
 	parser.add_argument('--xdmf',action='store_const',const=True, help='use .xdmf extension instead of default .xmf')
 	parser.add_argument('--auxiliary','-a',dest='aux',action='store_const',const=True, help='Write auxiliary computed (derivative) values like luminosity to a companion file (or append to the reduced file)')
 	parser.add_argument('--reduce',default=False,action='store_const',const=True, help='Also copy over the reduced data to the auxiliary file')
@@ -256,6 +256,8 @@ if __name__ == '__main__':
 			is_3d=(not is_2d)
 		n_hyperslabs = hf['mesh']['nz_hyperslabs'].value
 		n_elemental_species = hf['abundance']['xn_c'].shape[3]
+		n_particles = hf['particle']['partdim'][0]
+		qprint("Number of Particles " +str(n_particles))
 		entities={
 			"Extent_r":str(extents[0]),
 			"Extent_theta":str(extents[1]),
@@ -271,7 +273,20 @@ if __name__ == '__main__':
 			else:
 				eprint("Error: slices must not be more than the number of wedges")
 				sys.exit()
-		############################################################################################################################################################################################
+		# Manage content to be copied to reduced HDF
+		group_wanted = ['abundance','radiation','mesh','fluid','particle']
+		if args.disable:
+			if "particles" in args.disable:
+				group_wanted.remove('particle')
+			if "abundances" in args.disable:
+				group_wanted.remove('abundance')
+			if "hydro" in args.disable:
+				group_wanted.remove('fluid')
+			if "radiation" in args.disable:
+				group_wanted.remove('radiation')
+
+		qprint(group_wanted)
+	############################################################################################################################################################################################
 		# hydro_names dictionary defines mapping between names for scalars as they appear in VisIt (key) and how they are defined in the h5 file (value)
 		hydro_names = { 
 			"Entropy":"entropy",
@@ -303,11 +318,11 @@ if __name__ == '__main__':
 				def copygroup(group):
 					aux_hf.create_group(group[0])
 					for item in group[1].items():
-						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name','i_frame','raddim']:
+						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name','i_frame','raddim','partdim','px','py','pz']:
 							qprint('\tCopying from: '+hf.filename+':/'+group[0]+'/'+item[0]+'\n\t\tTo: '+aux_hf.filename+':/'+group[0]+'/'+item[0])
 							aux_hf[group[0]].create_dataset(item[0],data=item[1].value)					
 				for group in hf.items():
-					if group[0] in ['abundance','radiation','mesh','fluid']:
+					if group[0] in group_wanted:
 						copygroup(group)
 				entities['h5path']=rel_hdf_directory+AuxName[:-3]
 			if args.aux:
