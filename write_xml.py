@@ -276,6 +276,8 @@ if __name__ == '__main__':
 		# Manage content to be copied to reduced HDF
 		group_wanted = ['abundance','radiation','mesh','fluid','particle']
 		if args.disable:
+			if "analysis" in args.disable:
+				group_wanted.remove('analysis')
 			if "particles" in args.disable:
 				group_wanted.remove('particle')
 			if "abundances" in args.disable:
@@ -318,7 +320,7 @@ if __name__ == '__main__':
 				def copygroup(group):
 					aux_hf.create_group(group[0])
 					for item in group[1].items():
-						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name','i_frame','raddim','partdim','px','py','pz']:
+						if item[0] in hydro_names.values() + ['xn_c','time','t_bounce','x_ef','y_ef','z_ef','nse_c','a_name','i_frame','raddim','partdim','px','py','pz','r_shock']:
 							qprint('\tCopying from: '+hf.filename+':/'+group[0]+'/'+item[0]+'\n\t\tTo: '+aux_hf.filename+':/'+group[0]+'/'+item[0])
 							aux_hf[group[0]].create_dataset(item[0],data=item[1].value)					
 				for group in hf.items():
@@ -423,6 +425,74 @@ if __name__ == '__main__':
 				del mask_slice
 				qprint("Writing On_grid_mask to "+['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
 				aux_hf.create_dataset("/mesh/mask",data=mask)
+				
+				if not args.disable or ("shock" not in args.disable and "hydro" not in args.disable):
+					qprint('Creating Shock')
+					p = np.array(hf['/fluid/press'][:])
+					p = p.reshape(hf['/fluid/press'][:][0].size/hf['/fluid/press'][0][0].size, hf['/fluid/press'][0][0].size)
+					u = np.array(hf['/fluid/u_c'][:])
+					u = u.reshape(hf['/fluid/u_c'][:][0].size/hf['/fluid/u_c'][0][0].size, hf['/fluid/u_c'][0][0].size)
+					dim1 = hf['/fluid/u_c'][:][0].size/hf['/fluid/u_c'][0][0].size
+					dim2 = hf['/fluid/u_c'][0][0].size
+
+					f = np.zeros([dim1+1,dim2+1])
+					small = 1.0e-54
+
+					def shock(p, u, n):
+						pf = np.zeros(dim2)
+						final = np.zeros(dim2)
+						delp1 = np.zeros(dim2)
+						delp2 = np.zeros(dim2)
+						for i in range(dim2-2):
+							if i >= 2 and i < dim2-2:
+								delp1[i] = float(p[n,i+1] - p[n,i-1])
+								delp2[i] = float(p[n,i+2] - p[n,i-2])
+								shk = delp1[i]/(delp2[i]+small)
+								pf[i] = max(0.0, min(1.0, 10*(shk-0.75)))
+								exp1 = abs(delp1[i])/(min(p[n,i+1],p[n,i-1])+small)
+								if exp1 < (1/3):
+									pf[i] = 0.0
+								if u[n,i+1]-u[n,i-1]>0:
+									pf[i] = 0.0
+						for i in range(dim2-2):
+							if i < dim2-2 and delp1[i]<0:
+								final[i] = max(pf[i], pf[i-1])
+							elif i < dim2-2:
+								final[i] = max(pf[i],pf[i-1])
+							if i == dim2-3 or i == dim2-4:
+							 	if final[i-1]==0 and final[i]:
+							 		final[i]=0
+						f[n,:dim2] = final
+					for n in range(dim1):
+						shock(p,u,n)
+					qprint('Writing 2-D shock data to '+ ['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
+					f = f.reshape([dims[2],dims[1]+1,dims[0]+1])
+					aux_hf.create_dataset("/fluid/shock",data=f)
+			
+				if not args.disable or ("Abar" not in args.disable and "abundance" not in args.disable):
+					qprint('Creating Abar')
+					xn_c = np.array(hf['/abundance/xn_c'])
+					a_nuc_rep_c = np.array(hf['/abundance/a_nuc_rep_c'])
+					a_nuc = np.array(hf['/abundance/a_nuc'])
+
+					dim3 = hf['/abundance/xn_c'][0][0][0].size
+
+					a_nuc_rep_c = a_nuc_rep_c.reshape([dims[1],dims[0]])
+					xn_c = xn_c.reshape([dims[1],dims[0],dim3])
+
+					mass = np.empty([dims[1], dims[0]])
+					for i in range(dims[1]):
+					    for j in range(dims[0]):
+					        total_m = 0
+					        for k in range(dim3):
+					            if k < dim3 - 1:
+					                total_m += a_nuc[k] * xn_c[i,j,k]
+					            elif k == dim3 - 1:
+					                total_m += a_nuc_rep_c[i,j]*xn_c[i,j,k]
+					        mass[i,j] = total_m
+					mass = mass.reshape([dims[2],dims[1],dims[0]])
+					qprint('Writing Abar data to '+ ['auxiliary','reduced'][args.reduce]+" HDF file, "+aux_hf.filename)
+					aux_hf.create_dataset("/abundance/Abar",data=mass)
 			if args.reduce:
 				#now that data has been copied from the source HDF to the reduced HDF, close the original file and switch the variable used to the just created file. 
 				hf.close()
@@ -568,10 +638,12 @@ if __name__ == '__main__':
 						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/nse_c"
 					n+=1
 			del dim_nse,dim_nse_str
+			dim_nse=hf['abundance']['Abar'].shape
 			# Each of the abundances:
 			species_names=hf['abundance']['a_name'].value
 			if n_elemental_species-1==species_names.shape[0]:
 				species_names=np.append(species_names,'aux')
+				species_names=np.append(species_names,'Abar')
 			# The end goal is to make isotopes accessible as /Abundance/Element/Z and all other quantities accessible as /Abundance/QuantityName
 			for el,name in enumerate(species_names):
 				#for Isotopes
@@ -625,8 +697,10 @@ if __name__ == '__main__':
 							return_element=fun
 						dataElement = et.SubElement(return_element,"DataItem", ItemType="HyperSlab", Dimensions=extents_sub)
 						et.SubElement(dataElement,"DataItem",Dimensions="3 4",Format="XML").text="0 0 0 "+str(el)+" 1 1 1 1 "+[extents_sub,'1 '+extents_str][is_2d]+" 1"
-						if args.repeat==True:
+						if args.repeat==True and name != 'Abar':
 							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= h5string + ".h5:/abundance/xn_c"
+						elif name == 'Abar':
+							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d],NumberType="Float",Precision="8",Format="HDF").text= h5string + ".h5:/abundance/Abar"
 						else:
 							et.SubElement(dataElement,"DataItem",Dimensions=[dimstr_sub,dimstr][is_2d]+" "+str(n_elemental_species),NumberType="Float",Precision="8",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/xn_c"
 						n+=1
