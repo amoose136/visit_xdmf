@@ -638,7 +638,6 @@ if __name__ == '__main__':
 						et.SubElement(return_element,"DataItem",Dimensions=dim_nse_str,NumberType="Int",Format="HDF").text= "&h5path;" + [str(format(n, '02d')),''][args.reduce] + ".h5:/abundance/nse_c"
 					n+=1
 			del dim_nse,dim_nse_str
-			dim_nse=hf['abundance']['Abar'].shape
 			# Each of the abundances:
 			species_names=hf['abundance']['a_name'].value
 			if n_elemental_species-1==species_names.shape[0]:
