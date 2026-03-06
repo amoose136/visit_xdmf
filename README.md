@@ -1,10 +1,14 @@
+# ⚠️⚠️⚠️⚠️⚠️⚠️ __Warning__ ⚠️⚠️⚠️⚠️⚠️⚠️
+**This repository is now archived as I abruptly started getting notifications that this repository was using my GIT LFS quota. This is a 9 year old repository so I doubt it's still being used anywhere as the python is ancient at this point.**
+
+___
 
 This is my work from summer 2016. The goal is to add proper XDMF support to VisIt for use in the Chimera collaboration. It builds on the work Jake Rosa did during summer 2014. In this installation is a pair of large files managed by Git LFS that can also be found on the UTK newton server in /lustre/projects/astro/chimera/lentz/. The files are chimera_00774_grid_1_01.h5, and d96-2d-sn160-00774.silo. The SILO file was created with a script from the HDF5 file and displays properly in VisIt. We seek to eliminate the need for this script by using XDMF. With this goal in mind, two python scripts now exist within this repository: write_xml.py and reducer.py. 
 
 # write_xml.py
 Write_xml.py takes input HDF files from chimera and makes XDMF to read them. It also optionally reduces them down to a size Bellarophon can handle by copying over only the hydro and abundance scalars. Radiation quantities are computed optionally and also added. If a reduction step is not taken but the option to use computed quantities is selected, the computed quantities will be placed in another HDF file with the same name as the input file only with the wedge number replaced with the string `_aux`. 
 
-###Usage
+## Usage
     usage: write_xml.py [-h] [--threads int] [--slices [int]] [--prefix [str]]
                         [--repeat] [--quiet] [--short] [--norepeat]
                         [--disable str [str ...]] [--xdmf] [--directory [str]]
@@ -42,7 +46,7 @@ An example call might be like:
 
 This would just create a file titled `chimera_grid-1_step-003800000.xmf` 
 
-####Options
+## Options
 * __`--short`__ or __`-s`__   
 If one would rather not have the words _step_ and _grid_ in the file name, these can be eliminated by using the `--short` flag.
 Calling `$python write_xml.py foo_0123_grid_1_01.h5 -s` will yield a xdmf file name titled `foo-1-0123.xmf` instead of `foo_grid-1_step-0123.xmf` as would be default.
@@ -87,7 +91,7 @@ will output the XDMF file to the current directory instead of `..`.
 Equally valid to VisIt is the __.xmdf__ extension. I prefer shorter extensions usually but this is more descriptive so one can use this extension instead of __.xmf__ by adding the `--xdmf` flag.
 
 
-####Examples
+## Examples
 With shorter style filename option and also the xdmf flag (headless):
 **shell:** `$python write_xml.py foo_123_grid_1_01.h5 -qs --xdmf`
 **output:** `foo-1-123.xdmf` is created
